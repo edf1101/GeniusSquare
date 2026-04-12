@@ -15,7 +15,9 @@ ListMenuScreen::ListMenuScreen(TFT_eSPI& tft, ScreenManager& manager,
                                const ListItem* items, uint8_t count,
                                const char* title)
     : _tft(tft), _manager(manager), _items(items), _count(count), _title(title),
-      _selectedIndex(0), _viewStart(0)
+      _selectedIndex(0), _viewStart(0),
+      _borderPhase(0.0f), _borderEnvelope(0.0f), _lastBorderThickness(-1.0f),
+      _lastBorderColor(0), _lastMs(0), _dirty(false)
 {
 }
 
@@ -33,8 +35,14 @@ const char* ListMenuScreen::labelFor(uint8_t absIndex) const {
 // ---- Lifecycle ----
 
 void ListMenuScreen::onEnter() {
-    _selectedIndex = 0;
-    _viewStart     = 0;
+    _selectedIndex       = 0;
+    _viewStart           = 0;
+    _borderPhase         = 0.0f;
+    _borderEnvelope      = 0.0f;
+    _lastBorderThickness = -1.0f;
+    _lastBorderColor     = 0;
+    _lastMs              = millis();
+    _dirty               = false;
     _tft.fillScreen(COL_BG);
     drawTitleBar();
     drawRowArea();
@@ -43,6 +51,12 @@ void ListMenuScreen::onEnter() {
 void ListMenuScreen::onExit() {}
 
 void ListMenuScreen::onResume() {
+    _borderPhase         = 0.0f;
+    _borderEnvelope      = 0.0f;
+    _lastBorderThickness = -1.0f;
+    _lastBorderColor     = 0;
+    _lastMs              = millis();
+    _dirty               = false;
     _tft.fillScreen(COL_BG);
     drawTitleBar();
     drawRowArea();
@@ -85,6 +99,11 @@ void ListMenuScreen::onEncoderChange(int delta) {
     } else if (_selectedIndex >= _viewStart + VISIBLE_ROWS) {
         _viewStart = _selectedIndex - VISIBLE_ROWS + 1;
     }
+
+    // Reset border so it fades in fresh on the new row
+    _borderEnvelope      = 0.0f;
+    _borderPhase         = 0.0f;
+    _lastBorderThickness = -1.0f;
 
     drawRowArea();
 }
