@@ -53,7 +53,7 @@ private:
     static constexpr int SCR_W        = 280;
     static constexpr int SCR_H        = 240;
     static constexpr int TITLE_H      = 30;
-    static constexpr int ROW_H        = (SCR_H - TITLE_H) / VISIBLE_ROWS; ///< 52px
+    static constexpr int ROW_H        = (SCR_H - TITLE_H) / VISIBLE_ROWS; ///< 52px; 2px gap at screen bottom is intentional (black bg, invisible)
     static constexpr int NUM_COL_W    = 30;  ///< Width of the left number column
     static constexpr int NUM_BOX_SIZE = 24;  ///< Side length of the number box square
 
@@ -68,7 +68,7 @@ private:
     /**
      * @brief Total navigable items including the auto-injected Back entry.
      */
-    uint8_t totalItems() const;
+    uint16_t totalItems() const;
 
     /**
      * @brief Return the display label for an absolute index.
