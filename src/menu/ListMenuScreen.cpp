@@ -141,3 +141,20 @@ void ListMenuScreen::drawRowArea() {
         }
     }
 }
+
+uint16_t ListMenuScreen::blendColor(uint16_t bg, uint16_t fg, float alpha) {
+    uint8_t r = ((bg >> 11) & 0x1F) + (int)(((int)((fg >> 11) & 0x1F) - (int)((bg >> 11) & 0x1F)) * alpha);
+    uint8_t g = ((bg >>  5) & 0x3F) + (int)(((int)((fg >>  5) & 0x3F) - (int)((bg >>  5) & 0x3F)) * alpha);
+    uint8_t b = ((bg      ) & 0x1F) + (int)(((int)( fg        & 0x1F) - (int)( bg        & 0x1F)) * alpha);
+    return (uint16_t)((r << 11) | (g << 5) | b);
+}
+
+void ListMenuScreen::drawNumberBoxBorder(int boxX, int boxY, float thickness, uint16_t colour) {
+    int t = (int)roundf(thickness);
+    for (int i = 0; i < t; i++) {
+        _tft.drawRect(boxX - 1 - i, boxY - 1 - i,
+                      NUM_BOX_SIZE + 2 + 2 * i,
+                      NUM_BOX_SIZE + 2 + 2 * i,
+                      colour);
+    }
+}
