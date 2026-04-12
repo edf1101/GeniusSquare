@@ -12,6 +12,8 @@
 #include "menu/ScreenManager.h"
 #include "menu/MenuItem.h"
 #include "menu/CarouselMenuScreen.h"
+#include "menu/ListItem.h"
+#include "menu/ListMenuScreen.h"
 
 // ---- Hardware pins ----
 #define ROT_A    17
@@ -33,14 +35,25 @@ void onMultiplayerSelected(ScreenManager& mgr);
 MenuItem mainMenuItems[] = {
     { nullptr, 0, 0, 'S', "Solver",      onSolverSelected      },
     { nullptr, 0, 0, 'P', "Practice",    onPracticeSelected    },
-    { nullptr, 0, 0, 'M', "Multiplayer", onMultiplayerSelected },
+    // { nullptr, 0, 0, 'M', "Multiplayer", onMultiplayerSelected },
 };
 
-CarouselMenuScreen mainMenu(tft, screenManager, mainMenuItems, 3, "Genius Square");
+CarouselMenuScreen mainMenu(tft, screenManager, mainMenuItems, 2, "Genius Square");
+
+ListItem solverListItems[] = {
+    { "Arrangement A",  [](ScreenManager&){} },
+    { "Arrangement B",  [](ScreenManager&){} },
+    { "Arrangement C",  [](ScreenManager&){} },
+    { "Arrangement D",  [](ScreenManager&){} },
+    { "Arrangement E",  [](ScreenManager&){} },
+    { "Arrangement F",  [](ScreenManager&){} },
+};
+
+ListMenuScreen solverList(tft, screenManager, solverListItems, 6, "Solver");
 
 ButtonWrapper button(BTN_PIN, []() { screenManager.onButtonPress(); });
 
-void onSolverSelected(ScreenManager&)      { /* push SolverScreen when implemented */ }
+void onSolverSelected(ScreenManager& mgr)  { mgr.push(&solverList); }
 void onPracticeSelected(ScreenManager&)    { /* push PracticeScreen when implemented */ }
 void onMultiplayerSelected(ScreenManager&) { /* push MultiplayerScreen when implemented */ }
 
