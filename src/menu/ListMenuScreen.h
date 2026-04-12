@@ -77,7 +77,6 @@ private:
     static constexpr uint16_t COL_TEXT_SEL   = 0xFFFF; ///< Selected row text — white
     static constexpr uint16_t COL_TEXT_UNSEL = 0xAD75; ///< Unselected row text — grey
     static constexpr uint16_t COL_DIVIDER    = 0x2965; ///< Row divider line — dark grey
-    static constexpr uint16_t COL_NUM_BOX    = 0xFFFF; ///< Number box outline — white
     static constexpr uint16_t COL_BORDER     = 0xFFFF; ///< Animated glow border — white
     static constexpr uint16_t COL_TITLE      = 0xAD75; ///< Title bar text — light grey
 

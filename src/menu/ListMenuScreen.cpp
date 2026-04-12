@@ -5,6 +5,7 @@
  */
 
 #include "menu/ListMenuScreen.h"
+#include <math.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -98,30 +99,27 @@ void ListMenuScreen::drawRow(uint8_t screenRow, uint8_t absIndex, bool selected)
     // Clear the row (ROW_H-1 preserves the divider pixel at the bottom)
     _tft.fillRect(0, y, SCR_W, ROW_H - 1, COL_BG);
 
-    // Number box: 24×24px, centred in the 30px left column
-    int numBoxX = (NUM_COL_W - NUM_BOX_SIZE) / 2; // = 3
-    int numBoxY = y + (ROW_H - NUM_BOX_SIZE) / 2;  // = y + 14
+    // Number box: NUM_BOX_SIZE×NUM_BOX_SIZE, centred in the NUM_COL_W left column
+    int numBoxX = (NUM_COL_W - NUM_BOX_SIZE) / 2; // = 5
+    int numBoxY = y + (ROW_H - NUM_BOX_SIZE) / 2;  // = y + 6
 
-    if (selected) {
-        _tft.drawRect(numBoxX, numBoxY, NUM_BOX_SIZE, NUM_BOX_SIZE, COL_NUM_BOX);
-    }
-
-    // Row number text (1-based absolute position, not on-screen position).
-    // e.g. when scrolled to show items 3-6, numbers display as 3,4,5,6 — not 1,2,3,4.
-    // Size 2 = 12×16px per char. Note: 3-digit numbers (100+) visually overflow the 24px box.
+    // Row number text (1-based absolute position).
+    // Uses NUM_TEXT_SIZE=3: each char is NUM_TEXT_SIZE*6=18px wide, NUM_TEXT_SIZE*8=24px tall.
+    // Note: 3-digit numbers (100+) visually overflow the 40px box.
     char numStr[4];
     snprintf(numStr, sizeof(numStr), "%d", absIndex + 1);
-    int numTextX = numBoxX + (NUM_BOX_SIZE - (int)strlen(numStr) * 12) / 2;
-    int numTextY = numBoxY + (NUM_BOX_SIZE - 16) / 2; // = numBoxY + 4
+    int numTextX = numBoxX + (NUM_BOX_SIZE - (int)strlen(numStr) * NUM_TEXT_SIZE * 6) / 2;
+    int numTextY = numBoxY + (NUM_BOX_SIZE - NUM_TEXT_SIZE * 8) / 2;
     _tft.setTextColor(textColor, COL_BG);
-    _tft.setTextSize(2);
+    _tft.setTextSize(NUM_TEXT_SIZE);
     _tft.setCursor(numTextX, numTextY);
     _tft.print(numStr);
 
-    // Label text, size 2, vertically centred in row
-    int labelX = NUM_COL_W + 4;         // = 34
+    // Label text, size 2 (12×16px), vertically centred in row
+    int labelX = NUM_COL_W + 8;         // = 58
     int labelY = y + (ROW_H - 16) / 2; // = y + 18
     _tft.setTextColor(textColor, COL_BG);
+    _tft.setTextSize(2);
     _tft.setCursor(labelX, labelY);
     _tft.print(labelFor(absIndex));
 }
