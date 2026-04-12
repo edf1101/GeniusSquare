@@ -51,13 +51,31 @@ void ListMenuScreen::update() {}
 
 void ListMenuScreen::render() {}
 
-// ---- Input (stubs — implemented in Task 5) ----
+// ---- Input ----
 
 void ListMenuScreen::onEncoderChange(int delta) {
-    (void)delta;
+    int newIndex = (int)_selectedIndex + delta;
+    if (newIndex < 0)                    newIndex = 0;
+    if (newIndex >= (int)totalItems())   newIndex = (int)totalItems() - 1;
+    _selectedIndex = (uint8_t)newIndex;
+
+    // Scroll viewport to keep selected item visible
+    if (_selectedIndex < _viewStart) {
+        _viewStart = _selectedIndex;
+    } else if (_selectedIndex >= _viewStart + VISIBLE_ROWS) {
+        _viewStart = _selectedIndex - VISIBLE_ROWS + 1;
+    }
+
+    drawRowArea();
 }
 
-void ListMenuScreen::onButtonPress() {}
+void ListMenuScreen::onButtonPress() {
+    if (_selectedIndex == 0) {
+        _manager.pop();
+    } else {
+        _items[_selectedIndex - 1].action(_manager);
+    }
+}
 
 // ---- Drawing ----
 
