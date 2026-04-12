@@ -158,3 +158,38 @@ void ListMenuScreen::drawNumberBoxBorder(int boxX, int boxY, float thickness, ui
                       colour);
     }
 }
+
+void ListMenuScreen::updateNumberBoxBorder() {
+    int boxX = (NUM_COL_W - NUM_BOX_SIZE) / 2;
+    int boxY = TITLE_H + (_selectedIndex - _viewStart) * ROW_H + (ROW_H - NUM_BOX_SIZE) / 2;
+
+    float exactThickness = BORDER_T_MIN + (BORDER_T_MAX - BORDER_T_MIN) * (0.5f + 0.5f * sinf(_borderPhase));
+    uint16_t borderColour = (_borderEnvelope >= 0.99f)
+        ? COL_BORDER
+        : blendColor(COL_BG, COL_BORDER, _borderEnvelope);
+
+    // Early-exit: nothing changed since last frame
+    if (fabsf(exactThickness - _lastBorderThickness) < 0.01f && borderColour == _lastBorderColor) return;
+
+    // Too faded: clear old border (if any) and bail
+    if (_borderEnvelope < 0.02f) {
+        if (_lastBorderThickness >= 0.0f) {
+            drawNumberBoxBorder(boxX, boxY, _lastBorderThickness, COL_BG);
+        }
+        _lastBorderThickness = -1.0f;
+        _lastBorderColor     = 0;
+        return;
+    }
+
+    // First visible frame: draw without erase pass
+    if (_lastBorderThickness < 0.0f) {
+        drawNumberBoxBorder(boxX, boxY, exactThickness, borderColour);
+    } else {
+        // Erase old ring, draw new ring — prevents ghost pixels when thickness changes
+        drawNumberBoxBorder(boxX, boxY, _lastBorderThickness, COL_BG);
+        drawNumberBoxBorder(boxX, boxY, exactThickness, borderColour);
+    }
+
+    _lastBorderThickness = exactThickness;
+    _lastBorderColor     = borderColour;
+}
