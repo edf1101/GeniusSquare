@@ -48,9 +48,24 @@ void ListMenuScreen::onResume() {
     drawRowArea();
 }
 
-void ListMenuScreen::update() {}
+void ListMenuScreen::update() {
+    unsigned long now = millis();
+    float dt = (now - _lastMs) / 1000.0f;
+    _lastMs = now;
 
-void ListMenuScreen::render() {}
+    _borderPhase += BORDER_SPEED * dt;
+    if (_borderPhase >= 2.0f * (float)M_PI) _borderPhase -= 2.0f * (float)M_PI;
+
+    _borderEnvelope = min(_borderEnvelope + BORDER_INTRO_SPEED * dt, 1.0f);
+
+    _dirty = true;
+}
+
+void ListMenuScreen::render() {
+    if (!_dirty) return;
+    _dirty = false;
+    updateNumberBoxBorder();
+}
 
 // ---- Input ----
 
