@@ -1,0 +1,156 @@
+#include <Arduino.h>
+#include <TFT_eSPI.h> // Replaces Adafruit_GFX, Adafruit_ST7789, and SPI
+#include <RotaryWrapper.h>
+
+// --- TFT Display Configuration ---
+// Note: Pins and dimensions are now defined in platformio.ini!
+
+#define ROT_A 17
+#define ROT_B 18
+
+RotaryWrapper rot(ROT_A, ROT_B);
+
+// Instantiate TFT_eSPI
+TFT_eSPI tft = TFT_eSPI();
+
+uint16_t cols[] = {
+    tft.color565(255, 0, 0), tft.color565(0, 255, 0),
+    tft.color565(0, 0, 255), tft.color565(255, 255, 0),
+    tft.color565(255, 0, 255), tft.color565(0, 255, 255)
+};
+int colIndex = 0;
+
+
+// --- Matrix Configuration ---
+#define NUM_ROWS 6
+#define NUM_COLS 6
+
+int rowPins[NUM_ROWS] = { 14, 47, 48, 38, 41, 42 };
+int colPins[NUM_COLS] = { 7, 8, 10, 9, 1, 2 };
+
+// Settings for the color mapping
+const int THRESHOLD = 500;
+const int ADC_MAX = 4095; // ESP32 11dB attenuation max value
+
+// Variables to store the calculated size of each grid cell
+int cellWidth;
+int cellHeight;
+
+void changeCol(long change)
+{
+    // Change the column index and wrap around if it goes out of bounds
+    colIndex += change;
+    colIndex = ((colIndex%NUM_COLS) + NUM_COLS) % NUM_COLS; // Wrap around using modulo
+}
+
+void setup() {
+    Serial.begin(115200);
+
+    rot.setCallbackFunc(changeCol);
+
+    // 1. Initialize TFT Display
+    tft.init(); // Dimensions are automatically pulled from platformio.ini
+    tft.setRotation(1); // Usually makes it 280x240 landscape
+    tft.fillScreen(TFT_BLACK); // Changed from ST77XX_BLACK
+    // Forcefully flip the RGB/BGR bit in the MADCTL register after rotation
+    tft.writecommand(0x36);
+    tft.writedata(0xA0);
+    // Calculate cell dimensions based on screen size
+    cellWidth = tft.width() / NUM_COLS;
+    cellHeight = tft.height() / NUM_ROWS;
+
+    // 2. Initialize Matrix ADC / Pins
+    analogSetAttenuation(ADC_11db);
+    pinMode(16,INPUT);
+
+    for (int i = 0; i < NUM_ROWS; i++) {
+        pinMode(rowPins[i], OUTPUT);
+        digitalWrite(rowPins[i], HIGH);
+    }
+
+    for (int i = 0; i < NUM_COLS; i++) {
+        pinMode(colPins[i], ANALOG);
+
+        // Forcefully disable internal pull-ups and pull-downs
+        gpio_pulldown_dis((gpio_num_t)colPins[i]);
+        gpio_pullup_dis((gpio_num_t)colPins[i]);
+    }
+
+    Serial.println("System Ready: Matrix to TFT Active");
+}
+
+int readStableAnalog(int pin) {
+    // Throwaway read to clear the internal ADC MUX/Capacitor
+    analogRead(pin);
+    delayMicroseconds(10);
+    // Actual read
+    return analogRead(pin);
+}
+
+// Function to calculate the interpolated color based on sensor value
+// Function to calculate the interpolated color based on sensor value
+// Function to calculate the interpolated color based on sensor value
+uint16_t getMappedColor(int value) {
+    if (digitalRead(16) == HIGH) {
+        return TFT_GREEN; // Use standard library definition
+    }
+
+    // Cleanly clamp the value using Arduino's native constrain function
+    value = constrain(value, 0, ADC_MAX);
+
+    // Define our fixed 16-bit anchor colors
+    uint16_t colorBlack = TFT_BLACK;
+    uint16_t colorGrey  = tft.color565(128, 128, 128);
+
+    if (value <= THRESHOLD) {
+        // Map sensor value (0 to THRESHOLD) to an Alpha blend value (0 to 255)
+        uint8_t alpha = map(value, 0, THRESHOLD, 0, 255);
+
+        // Blend from Black to Grey based on the alpha
+        return tft.alphaBlend(alpha, colorGrey, colorBlack);
+
+    } else {
+        // Map sensor value (THRESHOLD to ADC_MAX) to an Alpha blend value (0 to 255)
+        uint8_t alpha = map(value, THRESHOLD, ADC_MAX, 0, 255);
+
+        // Safely get the current target color from cols[]
+        int colsCount = sizeof(cols) / sizeof(cols[0]);
+        int idx = colIndex % colsCount;
+        if (idx < 0) idx += colsCount;
+        uint16_t colorTarget = cols[idx];
+
+        // Blend from Grey to the Target Color based on the alpha
+        return tft.alphaBlend(alpha, colorTarget, colorGrey);
+    }
+}
+
+void loop() {
+    rot.poll();
+
+    for (int r = 0; r < NUM_ROWS; r++) {
+        digitalWrite(rowPins[r], LOW); // Turn row ON
+
+        // Increased Wake-up Delay
+        delayMicroseconds(800);
+
+        // The Row-Level Dummy Read
+        analogRead(colPins[0]);
+        delayMicroseconds(50);
+
+        for (int c = 0; c < NUM_COLS; c++) {
+            int val = readStableAnalog(colPins[c]);
+
+            // Calculate color and draw
+            uint16_t cellColor = getMappedColor(val);
+            tft.fillRect(c * cellWidth, r * cellHeight, cellWidth, cellHeight, cellColor);
+        }
+
+        digitalWrite(rowPins[r], HIGH); // Turn row OFF
+
+        // Give the columns time to drain to zero before hitting the next row
+        delayMicroseconds(100);
+    }
+
+    // Minimal delay to prevent overwhelming the SPI bus
+    delay(10);
+}
