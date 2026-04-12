@@ -95,8 +95,8 @@ void ListMenuScreen::drawRow(uint8_t screenRow, uint8_t absIndex, bool selected)
     int y = TITLE_H + screenRow * ROW_H;
     uint16_t textColor = selected ? COL_TEXT_SEL : COL_TEXT_UNSEL;
 
-    // Clear the row
-    _tft.fillRect(0, y, SCR_W, ROW_H, COL_BG);
+    // Clear the row (ROW_H-1 preserves the divider pixel at the bottom)
+    _tft.fillRect(0, y, SCR_W, ROW_H - 1, COL_BG);
 
     // Number box: 24×24px, centred in the 30px left column
     int numBoxX = (NUM_COL_W - NUM_BOX_SIZE) / 2; // = 3
@@ -107,9 +107,9 @@ void ListMenuScreen::drawRow(uint8_t screenRow, uint8_t absIndex, bool selected)
     }
 
     // Row number text (1-based), size 2 = 12×16px per char
-    char numStr[3];
-    snprintf(numStr, sizeof(numStr), "%d", screenRow + 1);
-    int numTextX = numBoxX + (NUM_BOX_SIZE - 12) / 2; // = numBoxX + 6
+    char numStr[4];
+    snprintf(numStr, sizeof(numStr), "%d", absIndex + 1);
+    int numTextX = numBoxX + (NUM_BOX_SIZE - (int)strlen(numStr) * 12) / 2;
     int numTextY = numBoxY + (NUM_BOX_SIZE - 16) / 2; // = numBoxY + 4
     _tft.setTextColor(textColor, COL_BG);
     _tft.setTextSize(2);
@@ -125,19 +125,19 @@ void ListMenuScreen::drawRow(uint8_t screenRow, uint8_t absIndex, bool selected)
 }
 
 void ListMenuScreen::drawRowArea() {
+    // Dividers drawn first so row fills (height ROW_H-1) never erase them
+    for (uint8_t i = 0; i < VISIBLE_ROWS - 1; i++) {
+        int divY = TITLE_H + (i + 1) * ROW_H - 1;
+        _tft.drawFastHLine(0, divY, SCR_W, COL_DIVIDER);
+    }
+
     for (uint8_t i = 0; i < VISIBLE_ROWS; i++) {
         uint8_t absIndex = _viewStart + i;
         if (absIndex < totalItems()) {
             drawRow(i, absIndex, absIndex == _selectedIndex);
         } else {
-            // No item here — clear to background
-            _tft.fillRect(0, TITLE_H + i * ROW_H, SCR_W, ROW_H, COL_BG);
+            // No item here — clear to background (ROW_H-1 to preserve divider pixel)
+            _tft.fillRect(0, TITLE_H + i * ROW_H, SCR_W, ROW_H - 1, COL_BG);
         }
-    }
-
-    // Dividers between rows (VISIBLE_ROWS-1 lines, not after the last row)
-    for (uint8_t i = 0; i < VISIBLE_ROWS - 1; i++) {
-        int divY = TITLE_H + (i + 1) * ROW_H;
-        _tft.drawFastHLine(0, divY, SCR_W, COL_DIVIDER);
     }
 }

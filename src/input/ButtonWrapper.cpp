@@ -11,8 +11,9 @@
  * @brief Construct a ButtonWrapper and configure the pin.
  */
 ButtonWrapper::ButtonWrapper(uint8_t pin, std::function<void()> onPress)
-    : _pin(pin), _lastState(HIGH), _lastPressMs(0), _onPress(onPress) {
+    : _pin(pin), _lastPressMs(0), _onPress(onPress) {
     pinMode(_pin, INPUT);
+    _lastState = digitalRead(_pin);
 }
 
 /**
