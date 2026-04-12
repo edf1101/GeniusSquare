@@ -106,7 +106,9 @@ void ListMenuScreen::drawRow(uint8_t screenRow, uint8_t absIndex, bool selected)
         _tft.drawRect(numBoxX, numBoxY, NUM_BOX_SIZE, NUM_BOX_SIZE, COL_NUM_BOX);
     }
 
-    // Row number text (1-based), size 2 = 12×16px per char
+    // Row number text (1-based absolute position, not on-screen position).
+    // e.g. when scrolled to show items 3-6, numbers display as 3,4,5,6 — not 1,2,3,4.
+    // Size 2 = 12×16px per char. Note: 3-digit numbers (100+) visually overflow the 24px box.
     char numStr[4];
     snprintf(numStr, sizeof(numStr), "%d", absIndex + 1);
     int numTextX = numBoxX + (NUM_BOX_SIZE - (int)strlen(numStr) * 12) / 2;
