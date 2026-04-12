@@ -17,7 +17,7 @@ ListMenuScreen::ListMenuScreen(TFT_eSPI& tft, ScreenManager& manager,
     : _tft(tft), _manager(manager), _items(items), _count(count), _title(title),
       _selectedIndex(0), _viewStart(0),
       _borderPhase(0.0f), _borderEnvelope(0.0f), _lastBorderThickness(-1.0f),
-      _lastBorderColor(0), _lastMs(0), _dirty(false)
+      _lastBorderColor(0), _lastMs(millis()), _dirty(false)
 {
 }
 
@@ -92,6 +92,20 @@ void ListMenuScreen::onEncoderChange(int delta) {
     _selectedIndex = (uint8_t)newIndex;
 
     if (_selectedIndex == prevIndex) return; // already at boundary, nothing to redraw
+
+    // Explicitly erase the live border on the departing row before the viewport shifts.
+    // The erase uses prevIndex and the current (pre-shift) _viewStart so the pixel
+    // coordinates are still valid. drawRowArea() would also clear this via fillRect, but
+    // making the erase explicit keeps the responsibility here rather than relying on
+    // drawRow's fill dimensions covering the border pixels.
+    if (_lastBorderThickness >= 0.0f) {
+        int oldScreenRow = (int)prevIndex - (int)_viewStart;
+        if (oldScreenRow >= 0 && oldScreenRow < (int)VISIBLE_ROWS) {
+            int oldBoxX = (NUM_COL_W - NUM_BOX_SIZE) / 2;
+            int oldBoxY = TITLE_H + oldScreenRow * ROW_H + (ROW_H - NUM_BOX_SIZE) / 2;
+            drawNumberBoxBorder(oldBoxX, oldBoxY, _lastBorderThickness, COL_BG);
+        }
+    }
 
     // Scroll viewport to keep selected item visible
     if (_selectedIndex < _viewStart) {
