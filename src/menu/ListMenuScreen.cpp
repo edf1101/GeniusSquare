@@ -59,12 +59,63 @@ void ListMenuScreen::onEncoderChange(int delta) {
 
 void ListMenuScreen::onButtonPress() {}
 
-// ---- Drawing (stubs — implemented in Task 4) ----
+// ---- Drawing ----
 
-void ListMenuScreen::drawTitleBar() {}
-
-void ListMenuScreen::drawRowArea() {}
+void ListMenuScreen::drawTitleBar() {
+    _tft.setTextColor(COL_TITLE, COL_BG);
+    _tft.setTextSize(2);
+    int titleX = (SCR_W - (int)strlen(_title) * 12) / 2;
+    _tft.setCursor(titleX, (TITLE_H - 16) / 2);
+    _tft.print(_title);
+}
 
 void ListMenuScreen::drawRow(uint8_t screenRow, uint8_t absIndex, bool selected) {
-    (void)screenRow; (void)absIndex; (void)selected;
+    int y = TITLE_H + screenRow * ROW_H;
+    uint16_t textColor = selected ? COL_TEXT_SEL : COL_TEXT_UNSEL;
+
+    // Clear the row
+    _tft.fillRect(0, y, SCR_W, ROW_H, COL_BG);
+
+    // Number box: 24×24px, centred in the 30px left column
+    int numBoxX = (NUM_COL_W - NUM_BOX_SIZE) / 2; // = 3
+    int numBoxY = y + (ROW_H - NUM_BOX_SIZE) / 2;  // = y + 14
+
+    if (selected) {
+        _tft.drawRect(numBoxX, numBoxY, NUM_BOX_SIZE, NUM_BOX_SIZE, COL_NUM_BOX);
+    }
+
+    // Row number text (1-based), size 2 = 12×16px per char
+    char numStr[3];
+    snprintf(numStr, sizeof(numStr), "%d", screenRow + 1);
+    int numTextX = numBoxX + (NUM_BOX_SIZE - 12) / 2; // = numBoxX + 6
+    int numTextY = numBoxY + (NUM_BOX_SIZE - 16) / 2; // = numBoxY + 4
+    _tft.setTextColor(textColor, COL_BG);
+    _tft.setTextSize(2);
+    _tft.setCursor(numTextX, numTextY);
+    _tft.print(numStr);
+
+    // Label text, size 2, vertically centred in row
+    int labelX = NUM_COL_W + 4;         // = 34
+    int labelY = y + (ROW_H - 16) / 2; // = y + 18
+    _tft.setTextColor(textColor, COL_BG);
+    _tft.setCursor(labelX, labelY);
+    _tft.print(labelFor(absIndex));
+}
+
+void ListMenuScreen::drawRowArea() {
+    for (uint8_t i = 0; i < VISIBLE_ROWS; i++) {
+        uint8_t absIndex = _viewStart + i;
+        if (absIndex < totalItems()) {
+            drawRow(i, absIndex, absIndex == _selectedIndex);
+        } else {
+            // No item here — clear to background
+            _tft.fillRect(0, TITLE_H + i * ROW_H, SCR_W, ROW_H, COL_BG);
+        }
+    }
+
+    // Dividers between rows (VISIBLE_ROWS-1 lines, not after the last row)
+    for (uint8_t i = 0; i < VISIBLE_ROWS - 1; i++) {
+        int divY = TITLE_H + (i + 1) * ROW_H;
+        _tft.drawFastHLine(0, divY, SCR_W, COL_DIVIDER);
+    }
 }
