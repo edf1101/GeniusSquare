@@ -54,10 +54,14 @@ void ListMenuScreen::render() {}
 // ---- Input ----
 
 void ListMenuScreen::onEncoderChange(int delta) {
+    const uint8_t prevIndex = _selectedIndex;
+
     int newIndex = (int)_selectedIndex + delta;
     if (newIndex < 0)                    newIndex = 0;
     if (newIndex >= (int)totalItems())   newIndex = (int)totalItems() - 1;
     _selectedIndex = (uint8_t)newIndex;
+
+    if (_selectedIndex == prevIndex) return; // already at boundary, nothing to redraw
 
     // Scroll viewport to keep selected item visible
     if (_selectedIndex < _viewStart) {
