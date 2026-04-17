@@ -2,7 +2,11 @@
   "permissions": {
     "allow": [
       "Bash(/Users/edfillingham/.claude/plugins/cache/claude-plugins-official/superpowers/5.0.7/skills/brainstorming/scripts/start-server.sh:*)",
-      "Bash(pio run:*)"
+      "Bash(pio run:*)",
+      "Bash(git add:*)",
+      "Bash(git commit -m ':*)",
+      "Bash(2)",
+      "Bash(git:*)"
     ]
   }
 }

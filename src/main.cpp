@@ -14,17 +14,24 @@
 #include "menu/CarouselMenuScreen.h"
 #include "menu/ListItem.h"
 #include "menu/ListMenuScreen.h"
+#include "menu/ArrangementItem.h"
+#include "menu/ArrangementMenuScreen.h"
 
 // ---- Hardware pins ----
-#define ROT_A    17
-#define ROT_B    18
-#define BTN_PIN  16
+// Rotary encoder pins connected to ESP32-S3 using PCNT hardware counter
+#define ROT_A    17  ///< Rotary encoder A pin
+#define ROT_B    18  ///< Rotary encoder B pin
+#define BTN_PIN  16  ///< Button pin (active LOW, internally pulled up)
 
 // ---- Hardware objects ----
+/// Shared TFT_eSPI display instance (240×280 landscape after rotation)
 TFT_eSPI tft = TFT_eSPI();
+
+/// Rotary encoder wrapper; provides delta-based callback on half-quad ticks
 RotaryWrapper rot(ROT_A, ROT_B);
 
 // ---- Application ----
+/// Screen stack manager — owns all active screens and forwards input events
 ScreenManager screenManager;
 
 // Forward declarations for menu item actions
@@ -32,14 +39,17 @@ void onSolverSelected(ScreenManager& mgr);
 void onPracticeSelected(ScreenManager& mgr);
 void onMultiplayerSelected(ScreenManager& mgr);
 
+/// Main menu carousel: 3 game modes (Solver, Practice, Multiplayer — last disabled)
 MenuItem mainMenuItems[] = {
     { nullptr, 0, 0, 'S', "Solver",      onSolverSelected      },
     { nullptr, 0, 0, 'P', "Practice",    onPracticeSelected    },
     // { nullptr, 0, 0, 'M', "Multiplayer", onMultiplayerSelected },
 };
 
+/// Main carousel screen — animates 3 menu options with tile morphing
 CarouselMenuScreen mainMenu(tft, screenManager, mainMenuItems, 2, "Genius Square");
 
+/// Solver submenu: 6 arrangement/puzzle options
 ListItem solverListItems[] = {
     { "Arrangement A",  [](ScreenManager&){} },
     { "Arrangement B",  [](ScreenManager&){} },
@@ -49,35 +59,99 @@ ListItem solverListItems[] = {
     { "Arrangement F",  [](ScreenManager&){} },
 };
 
+/// Solver list screen — vertical scrollable menu with numbered rows
 ListMenuScreen solverList(tft, screenManager, solverListItems, 6, "Solver");
 
+/// Practice submenu: 2 placeholder arrangements
+ArrangementItem practiceItems[] = {
+    {
+        Difficulty::EASY,
+        0.0f,  // no score yet
+        { {0,0}, {1,2}, {2,4}, {3,1}, {4,3}, {5,0}, {2,2} },
+        [](ScreenManager&) {}
+    },
+    {
+        Difficulty::MED,
+        83.0f,  // 1:23
+        { {0,5}, {1,0}, {2,3}, {3,5}, {4,1}, {5,4}, {3,3} },
+        [](ScreenManager&) {}
+    },
+};
+
+/// Practice arrangement selection screen
+ArrangementMenuScreen practiceMenu(tft, screenManager, practiceItems, 2, "Practice");
+
+/// Button input with 50ms debounce; reports presses to ScreenManager
 ButtonWrapper button(BTN_PIN, []() { screenManager.onButtonPress(); });
 
+/**
+ * @brief Solver menu action — push the solver list screen onto the stack.
+ */
 void onSolverSelected(ScreenManager& mgr)  { mgr.push(&solverList); }
-void onPracticeSelected(ScreenManager&)    { /* push PracticeScreen when implemented */ }
+
+/**
+ * @brief Practice menu action — push the arrangement selection screen.
+ */
+void onPracticeSelected(ScreenManager& mgr) { mgr.push(&practiceMenu); }
+
+/**
+ * @brief Multiplayer menu action — placeholder; will push MultiplayerScreen when implemented.
+ */
 void onMultiplayerSelected(ScreenManager&) { /* push MultiplayerScreen when implemented */ }
 
+/**
+ * @brief Arduino setup() — initialises hardware and launches the main menu.
+ *
+ * 1. Start serial debug output (115200 baud)
+ * 2. Initialise TFT display (ST7789 via SPI):
+ *    - Set landscape rotation (280×240)
+ *    - Force MADCTL RGB/BGR bit to match expected colour format
+ *    - Fill screen with black
+ * 3. Configure ADC attenuation for grid scanner column reads
+ * 4. Attach rotary encoder callback (negated delta so CW = +1)
+ * 5. Push main menu onto ScreenManager stack (calls onEnter())
+ */
 void setup() {
     Serial.begin(115200);
 
+    // Initialise ST7789 240×280 display with FSPI/HSPI hardware SPI.
+    // Rotates to landscape 280×240 for buttons on the right edge.
     tft.init();
     tft.setRotation(1); // landscape: 280×240
-    tft.writecommand(0x36); // Forcefully fix RGB/BGR bit in MADCTL after rotation
-    tft.writedata(0xA0);
+    // Force RGB/BGR bit in MADCTL after rotation to fix colour channel order.
+    // Without this, red and blue channels would be swapped (TFT_eSPI library quirk).
+    tft.writecommand(0x36); // MADCTL (Memory Access Control)
+    tft.writedata(0xA0);    // MY=1, MX=0, MV=0, ML=0, RGB=1
     tft.fillScreen(TFT_BLACK);
 
+    // ADC configured for 11dB attenuation; grid scanner reads ADC pins directly.
+    // Attenuation determines input voltage range; 11dB allows ~0–3.3V full range.
     analogSetAttenuation(ADC_11db);
 
+    // Attach rotary encoder callback. Negated delta so CW rotation = positive delta.
+    // (ESP32Encoder convention is CW = negative, but UI convention is CW = +1)
     rot.setCallbackFunc([](long delta) {
         screenManager.onEncoderChange(-(int)delta);
     });
 
+    // Push main menu screen to kick off the UI.
     screenManager.push(&mainMenu);
 }
 
+/**
+ * @brief Arduino loop() — the main event loop, called ~1000 times per second.
+ *
+ * Each iteration:
+ * 1. Poll rotary encoder for step changes (reads PCNT counter)
+ * 2. Poll button for debounced presses
+ * 3. Update all animation state (carousel lerp, border wave, etc.)
+ * 4. Render the current screen to the TFT
+ *
+ * The ScreenManager forwards input events and render calls to the active screen.
+ */
 void loop() {
-    rot.poll();
-    button.poll();
-    screenManager.update();
-    screenManager.render();
+    rot.poll();              // Check encoder; fires callback on delta
+    button.poll();           // Check button; fires callback on debounced press
+    screenManager.update();  // Advance animations (called every frame)
+    screenManager.render();  // Draw current screen to TFT
 }
