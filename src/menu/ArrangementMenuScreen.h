@@ -31,8 +31,8 @@ public:
      * @brief Construct an ArrangementMenuScreen.
      * @param tft     Reference to the shared TFT display.
      * @param manager Reference to the ScreenManager.
-     * @param items   Pointer to exactly 2 ArrangementItems. Must outlive this object.
-     * @param count   Must be 2 (asserted).
+     * @param items   Pointer to ArrangementItems. Must outlive this object.
+     * @param count   Number of arrangement items (excluding auto-injected Back row).
      * @param title   Text displayed in the title bar.
      */
     ArrangementMenuScreen(TFT_eSPI& tft, ScreenManager& manager,

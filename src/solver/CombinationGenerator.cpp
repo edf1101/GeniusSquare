@@ -21,14 +21,12 @@ vector<vector<std::string>>  CombinationGenerator::diceFaces = {
  * @return The new pseudo-random value
  */
 int CombinationGenerator::hash(int seed) {
-  // Total combinations = 6 * 6 * 2 * 6 * 4 * 6 * 6
-  const int n = 6 * 6 * 2 * 6 * 4 * 6 * 6; // 62208
+  const int n = 62208;
 
-  // Keep multiplier coprime with n for decent LCG behavior.
-  const int a = 157;
+  // Much larger multiplier that still satisfies Hull-Dobell
+  const int a = 38449;
   const int c = 17;
 
-  // Normalize to non-negative in case seed is negative.
   int value = (a * seed + c) % n;
   if (value < 0) value += n;
   return value;

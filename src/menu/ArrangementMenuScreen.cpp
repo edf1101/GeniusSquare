@@ -35,7 +35,7 @@ ArrangementMenuScreen::ArrangementMenuScreen(TFT_eSPI& tft, ScreenManager& manag
     : _tft(tft), _manager(manager), _items(items), _count(count), _title(title),
       _selectedIndex(0), _viewStart(0), _dirty(false), _lastMs(0)
 {
-    assert(count == 2);
+    assert(VISIBLE_ROWS == 2);
 }
 
 // ---- Runtime update ----
@@ -46,7 +46,7 @@ ArrangementMenuScreen::ArrangementMenuScreen(TFT_eSPI& tft, ScreenManager& manag
  * @param count Must be 2.
  */
 void ArrangementMenuScreen::setItems(ArrangementItem* items, uint8_t count) {
-    assert(count == 2);
+    assert(VISIBLE_ROWS == 2);
     _items = items;
     _count = count;
     _dirty = true;
@@ -240,6 +240,10 @@ void ArrangementMenuScreen::drawRow(uint8_t absIndex, uint8_t rowSlot) {
 
     // Build text strings
     static const char* DIFF_LABELS[] = { "Easy", "Med", "Hard" };
+
+    char numLine[24];
+    snprintf(numLine, sizeof(numLine), "%d.", absIndex);
+
     static constexpr uint8_t DIFF_LABELS_COUNT = sizeof(DIFF_LABELS) / sizeof(DIFF_LABELS[0]);
     uint8_t diffIdx = (uint8_t)item.difficulty;
     if (diffIdx >= DIFF_LABELS_COUNT) diffIdx = 0;
@@ -258,9 +262,11 @@ void ArrangementMenuScreen::drawRow(uint8_t absIndex, uint8_t rowSlot) {
     // Line pair height: 16 + 8 + 16 = 40px; top pad = (105 - 40) / 2 = 32px.
     _tft.setTextColor(textColor, COL_BG);
     _tft.setTextSize(2);
-    _tft.setCursor(8, rowTop + 32);
+    _tft.setCursor(8, rowTop + 18);
+    _tft.print(numLine);
+    _tft.setCursor(8, rowTop + 49);
     _tft.print(line1);
-    _tft.setCursor(8, rowTop + 56);
+    _tft.setCursor(8, rowTop + 71);
     _tft.print(line2);
 
     // Grid on right side

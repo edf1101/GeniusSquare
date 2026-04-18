@@ -16,6 +16,7 @@
 #include "menu/ListMenuScreen.h"
 #include "menu/ArrangementItem.h"
 #include "menu/ArrangementMenuScreen.h"
+#include "solver/CombinationGenerator.h"
 
 // ---- Hardware pins ----
 // Rotary encoder pins connected to ESP32-S3 using PCNT hardware counter
@@ -62,24 +63,12 @@ ListItem solverListItems[] = {
 /// Solver list screen — vertical scrollable menu with numbered rows
 ListMenuScreen solverList(tft, screenManager, solverListItems, 6, "Solver");
 
-/// Practice submenu: 2 placeholder arrangements
-ArrangementItem practiceItems[] = {
-    {
-        Difficulty::EASY,
-        0.0f,  // no score yet
-        { {0,0}, {1,2}, {2,4}, {3,1}, {4,3}, {5,0}, {2,2} },
-        [](ScreenManager&) {}
-    },
-    {
-        Difficulty::MED,
-        83.0f,  // 1:23
-        { {0,5}, {1,0}, {2,3}, {3,5}, {4,1}, {5,4}, {3,3} },
-        [](ScreenManager&) {}
-    },
-};
+/// Practice arrangement items — populated in setup() from CombinationGenerator
+static constexpr uint8_t PRACTICE_ITEM_COUNT = 100;
+ArrangementItem practiceItems[PRACTICE_ITEM_COUNT];
 
 /// Practice arrangement selection screen
-ArrangementMenuScreen practiceMenu(tft, screenManager, practiceItems, 2, "Practice");
+ArrangementMenuScreen practiceMenu(tft, screenManager, practiceItems, PRACTICE_ITEM_COUNT, "Practice");
 
 /// Button input with 50ms debounce; reports presses to ScreenManager
 ButtonWrapper button(BTN_PIN, []() { screenManager.onButtonPress(); });
@@ -133,6 +122,14 @@ void setup() {
     rot.setCallbackFunc([](long delta) {
         screenManager.onEncoderChange(-(int)delta);
     });
+
+    // Populate practice arrangements from the first N CombinationGenerator seeds.
+    for (int i = 0; i < PRACTICE_ITEM_COUNT; i++) {
+        practiceItems[i].difficulty  = Difficulty::EASY;
+        practiceItems[i].seconds     = 0.0f;
+        practiceItems[i].arrangement = CombinationGenerator::generateCombinations(i);
+        practiceItems[i].action      = [](ScreenManager&) {};
+    }
 
     // Push main menu screen to kick off the UI.
     screenManager.push(&mainMenu);
