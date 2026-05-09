@@ -58,3 +58,16 @@ std::vector<std::vector<float>> GridScanner::analogReadMatrix() {
 
     return matrix;
 }
+
+std::vector<std::vector<bool>> GridScanner::digitalReadMatrix(float threshold) {
+    auto analog = analogReadMatrix();
+    std::vector<std::vector<bool>> result(NUM_ROWS, std::vector<bool>(NUM_COLS, false));
+
+    for (int r = 0; r < NUM_ROWS; r++) {
+        for (int c = 0; c < NUM_COLS; c++) {
+            result[r][c] = analog[r][c] >= threshold;
+        }
+    }
+
+    return result;
+}

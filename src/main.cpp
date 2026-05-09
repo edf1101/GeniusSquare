@@ -7,7 +7,7 @@
 #include <Arduino.h>
 #include <TFT_eSPI.h>
 
-#include "RotaryWrapper.h"
+#include "input/RotaryWrapper.h"
 #include "input/ButtonWrapper.h"
 #include "menu/ScreenManager.h"
 #include "menu/MenuItem.h"
@@ -17,6 +17,7 @@
 #include "menu/ArrangementItem.h"
 #include "menu/ArrangementMenuScreen.h"
 #include "solver/CombinationGenerator.h"
+#include "hardware/GridScanner.h"
 
 // ---- Hardware pins ----
 // Rotary encoder pins connected to ESP32-S3 using PCNT hardware counter
@@ -71,7 +72,7 @@ ArrangementItem practiceItems[PRACTICE_ITEM_COUNT];
 ArrangementMenuScreen practiceMenu(tft, screenManager, practiceItems, PRACTICE_ITEM_COUNT, "Practice");
 
 /// Button input with 50ms debounce; reports presses to ScreenManager
-ButtonWrapper button(BTN_PIN, []() { screenManager.onButtonPress(); });
+ButtonWrapper button(BTN_PIN, []() { screenManager.onButtonPress(); },[]() { });
 
 /**
  * @brief Solver menu action — push the solver list screen onto the stack.
@@ -113,9 +114,8 @@ void setup() {
     tft.writedata(0xA0);    // MY=1, MX=0, MV=0, ML=0, RGB=1
     tft.fillScreen(TFT_BLACK);
 
-    // ADC configured for 11dB attenuation; grid scanner reads ADC pins directly.
-    // Attenuation determines input voltage range; 11dB allows ~0–3.3V full range.
-    analogSetAttenuation(ADC_11db);
+    // GridScanner handles ADC configuration
+    GridScanner::init();
 
     // Attach rotary encoder callback. Negated delta so CW rotation = positive delta.
     // (ESP32Encoder convention is CW = negative, but UI convention is CW = +1)
