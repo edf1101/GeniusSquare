@@ -16,6 +16,7 @@
 #include "menu/Screen.h"
 #include "menu/ScreenManager.h"
 #include "menu/BorderAnimator.h"
+#include "solver/SolverTask.h"
 
 class SolverMenuScreen : public Screen {
 public:
@@ -47,6 +48,10 @@ private:
     bool  _solvable;
     char  _reason[12];          ///< "Too few", "Too many", "Invalid", or "" when solvable
     unsigned long _lastScanMs;
+
+    // ---- Solver ----
+    SolverTask          _solver;
+    std::vector<Coord>  _lastBlockers;
 
     // ---- Layout: buttons ----
     static constexpr int SCR_W          = 280;

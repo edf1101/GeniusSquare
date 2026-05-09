@@ -61,7 +61,10 @@ void SolverMenuScreen::onEnter() {
     _lastScanMs = millis();
 }
 
-void SolverMenuScreen::onExit() {}
+void SolverMenuScreen::onExit() {
+    _solver.stop();
+    _lastBlockers.clear();
+}
 
 void SolverMenuScreen::onResume() {
     _border.reset();
@@ -268,7 +271,7 @@ void SolverMenuScreen::checkValidity() {
         for (int c = 0; c < GRID_COLS; c++) {
             if (_grid[r][c]) {
                 count++;
-                coords.push_back(Coord{c, r});  // x=col, y=row (matches optionToCoords)
+                coords.push_back(Coord{c, r});
             }
         }
     }
@@ -289,6 +292,20 @@ void SolverMenuScreen::checkValidity() {
         }
     }
     _reason[sizeof(_reason) - 1] = '\0';
+
+    if (_solvable) {
+        if (coords != _lastBlockers) {
+            Serial.println("[SolverMenu] Valid arrangement detected, starting solve");
+            _lastBlockers = coords;
+            _solver.start(coords);
+        }
+    } else {
+        if (!_lastBlockers.empty()) {
+            Serial.println("[SolverMenu] Arrangement changed/invalid, stopping solve");
+            _solver.stop();
+            _lastBlockers.clear();
+        }
+    }
 }
 
 // ---- Side panel ----
