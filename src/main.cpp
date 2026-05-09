@@ -16,6 +16,7 @@
 #include "menu/ArrangementItem.h"
 #include "menu/ArrangementMenuScreen.h"
 #include "solver/CombinationGenerator.h"
+#include "solver/DifficultyLookup.h"
 #include "hardware/GridScanner.h"
 
 // ---- Hardware pins ----
@@ -114,7 +115,13 @@ void setup() {
 
     // Populate practice arrangements from the first N CombinationGenerator seeds.
     for (int i = 0; i < PRACTICE_ITEM_COUNT; i++) {
-        practiceItems[i].difficulty  = Difficulty::EASY;
+        PuzzleDifficulty packed = getDifficulty(i);
+        switch (packed) {
+            case PuzzleDifficulty::HARD:   practiceItems[i].difficulty = Difficulty::HARD; break;
+            case PuzzleDifficulty::MEDIUM: practiceItems[i].difficulty = Difficulty::MED; break;
+            case PuzzleDifficulty::EASY:   practiceItems[i].difficulty = Difficulty::EASY; break;
+            default:                       practiceItems[i].difficulty = Difficulty::EASY; break;
+        }
         practiceItems[i].seconds     = 0.0f;
         practiceItems[i].arrangement = CombinationGenerator::generateCombinations(i);
         practiceItems[i].action      = [](ScreenManager&) {};

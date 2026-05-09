@@ -11,7 +11,10 @@
       "WebFetch(domain:github.com)",
       "WebFetch(domain:raw.githubusercontent.com)",
       "WebSearch",
-      "WebFetch(domain:docs.espressif.com)"
+      "WebFetch(domain:docs.espressif.com)",
+      "Bash(make clean *)",
+      "Bash(make)",
+      "Bash(./genius_solver)"
     ]
   }
 }
