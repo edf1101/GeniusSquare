@@ -7,6 +7,7 @@
 #ifndef GENIUS_SQUARE_ARDUINO_BOARD_H
 #define GENIUS_SQUARE_ARDUINO_BOARD_H
 
+#include <atomic>
 #include <vector>
 #include <string>
 
@@ -19,6 +20,7 @@ using namespace std;
 class Board {
 public:
     Board(vector<Coord> blockers, int solutionLimit = 3, int timeLimit = 20);
+    Board(const Board& other);
 
     string toString(); // represent the board as a string.
 
@@ -28,9 +30,17 @@ public:
 
     bool solve();
 
+    /** @brief Signal the solver to abort at the next recursion check. Safe to call from another core. */
+    void cancel();
+
+    /** @brief Print the current board state (solution) to the Serial monitor. */
+    void printSolution();
+
+    ~Board();
 
 private:
     unsigned long startSolveTime = 0;
+    std::atomic<bool> _cancel{false};
     vector<Coord> blockers;
     vector<Piece> pieces;
     int solutionLimit;
@@ -54,7 +64,11 @@ private:
 
     bool getOutOfTime() const;
 
+    bool isCancelled() const;
+
     int getSolutionLimit() const;
+
+    bool _isRoot = false;
 
 };
 

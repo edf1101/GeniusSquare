@@ -33,6 +33,38 @@ Board::Board(vector<Coord> blockers, int solution_limit, int time_limit) {
     placePiece(blocker, 0, pieces[0]);
   }
 
+  Serial.printf("[Board] Created ptr=%p blockers=%s\n",
+      (void*)this,
+      Maths::coordsToString(this->blockers).c_str());
+  _isRoot = true;
+}
+
+Board::~Board() {
+    if (_isRoot) {
+        Serial.printf("[Board] Destroyed ptr=%p\n", (void*)this);
+    }
+}
+
+Board::Board(const Board& other)
+    : startSolveTime(other.startSolveTime),
+      _cancel(other._cancel.load()),
+      blockers(other.blockers),
+      pieces(other.pieces),
+      solutionLimit(other.solutionLimit),
+      timeLimit(other.timeLimit),
+      solutions(other.solutions)
+{
+    memcpy(space, other.space, sizeof(space));
+}
+
+void Board::cancel() {
+    _cancel = true;
+}
+
+void Board::printSolution() {
+    Serial.println("[Board] Solution:");
+    Serial.print(toString().c_str());
+    Serial.println();
 }
 
 string Board::toString() {
@@ -131,6 +163,16 @@ bool Board::getOutOfTime() const {
    */
 
   return (millis() - startSolveTime) > timeLimit * 1000;
+}
+
+bool Board::isCancelled() const {
+  /**
+   * Check if the solver has been cancelled.
+   *
+   * @return: True if the solver has been cancelled.
+   */
+
+  return _cancel.load();
 }
 
 int Board::getSolutionLimit() const {
@@ -260,14 +302,14 @@ bool Board::recursiveSolve(Board* rootBoard, vector<Piece> remainingPieces) {
 
   Piece piece = remainingPieces[0];
 
-  if (rootBoard->getOutOfTime()) {
+  if (rootBoard->getOutOfTime() || rootBoard->isCancelled()) {
     return false;
   }
 
   for (int row = 0; row < 6; row++) {
     for (int col = 0; col < 6; col++) {
 
-      if (rootBoard->getOutOfTime()) { // so it doesnt try each space after time limit is reached.
+      if (rootBoard->getOutOfTime() || rootBoard->isCancelled()) { // so it doesnt try each space after time limit is reached.
         return false;
       }
 
@@ -304,6 +346,7 @@ bool Board::solve() {
    * Solve the board.
    */
 
+  Serial.printf("[Board] solve() started ptr=%p\n", (void*)this);
   startSolveTime = millis();
 
   vector<Piece> remainingPieces = vector<Piece>(pieces.begin() + 1, pieces.end());
@@ -319,5 +362,8 @@ bool Board::solve() {
     }
   }
 
-  return !solutions.empty();
+  bool found = !solutions.empty();
+  Serial.printf("[Board] solve() done ptr=%p — %s\n",
+      (void*)this, found ? "FOUND" : "NOT FOUND");
+  return found;
 }
