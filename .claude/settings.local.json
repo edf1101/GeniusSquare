@@ -6,7 +6,12 @@
       "Bash(git add:*)",
       "Bash(git commit -m ':*)",
       "Bash(2)",
-      "Bash(git:*)"
+      "Bash(git:*)",
+      "Bash(xargs -I{} nm {})",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "WebSearch",
+      "WebFetch(domain:docs.espressif.com)"
     ]
   }
 }

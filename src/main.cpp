@@ -12,8 +12,7 @@
 #include "menu/ScreenManager.h"
 #include "menu/MenuItem.h"
 #include "menu/CarouselMenuScreen.h"
-#include "menu/ListItem.h"
-#include "menu/ListMenuScreen.h"
+#include "menu/SolverMenuScreen.h"
 #include "menu/ArrangementItem.h"
 #include "menu/ArrangementMenuScreen.h"
 #include "solver/CombinationGenerator.h"
@@ -51,18 +50,8 @@ MenuItem mainMenuItems[] = {
 /// Main carousel screen — animates 3 menu options with tile morphing
 CarouselMenuScreen mainMenu(tft, screenManager, mainMenuItems, 2, "Genius Square");
 
-/// Solver submenu: 6 arrangement/puzzle options
-ListItem solverListItems[] = {
-    { "Arrangement A",  [](ScreenManager&){} },
-    { "Arrangement B",  [](ScreenManager&){} },
-    { "Arrangement C",  [](ScreenManager&){} },
-    { "Arrangement D",  [](ScreenManager&){} },
-    { "Arrangement E",  [](ScreenManager&){} },
-    { "Arrangement F",  [](ScreenManager&){} },
-};
-
-/// Solver list screen — vertical scrollable menu with numbered rows
-ListMenuScreen solverList(tft, screenManager, solverListItems, 6, "Solver");
+/// Solver entry screen — Solve / Back two-button layout
+SolverMenuScreen solverMenu(tft, screenManager);
 
 /// Practice arrangement items — populated in setup() from CombinationGenerator
 static constexpr uint8_t PRACTICE_ITEM_COUNT = 100;
@@ -77,7 +66,7 @@ ButtonWrapper button(BTN_PIN, []() { screenManager.onButtonPress(); },[]() { });
 /**
  * @brief Solver menu action — push the solver list screen onto the stack.
  */
-void onSolverSelected(ScreenManager& mgr)  { mgr.push(&solverList); }
+void onSolverSelected(ScreenManager& mgr)  { mgr.push(&solverMenu); }
 
 /**
  * @brief Practice menu action — push the arrangement selection screen.

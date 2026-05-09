@@ -78,3 +78,6 @@ Every file starts with:
 - Header guards (`#ifndef`/`#define`/`#endif`) in all `.h` files
 - Doxygen-style docstrings on classes, functions, and enums (brief + `@param`/`@return`)
 - Comments only for non-obvious logic
+
+## Git Rules
+You should be sparing with your git commits. Only commit when you have a fully working feature or bugfix, and ensure the commit message is descriptive of the change. Avoid committing half-finished code or large refactors without clear commit messages. You should not commit for things documentation, unless that is the task you were asked to do. You should ask before committing as well.

@@ -89,15 +89,13 @@ bool CombinationGenerator::validCombination(vector<Coord> blockers) {
   for (int i = 0; i < blockers.size(); i++) {
     Coord coord = blockers[i];
 
-    // find which dice was used for this blocker
-
+    // find which die produced this blocker coord
     int dice = 0;
-    for (i = 0; i < 7; i++) {
-      for (int face = 0; face < 6; face++) {
-        string diceOption = diceFaces[i][0];
-        Coord diceCoord = Dice::optionToCoords(diceOption);
+    for (int j = 0; j < 7; j++) {
+      for (int face = 0; face < (int)diceFaces[j].size(); face++) {
+        Coord diceCoord = Dice::optionToCoords(diceFaces[j][face]);
         if (diceCoord.x == coord.x && diceCoord.y == coord.y) {
-          dice = i;
+          dice = j;
           break;
         }
       }
