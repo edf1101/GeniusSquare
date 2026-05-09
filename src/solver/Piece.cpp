@@ -136,10 +136,10 @@ void Piece::createPieces() {
   Piece Red = Piece("Red", "\u001b[38;5;1m", {255, 0, 0},
                     {{false, true, true},
                      {true,  true, false}});
-  Piece Yellow = Piece("Yellow", "\u001b[38;5;11m", {255, 179, 0},
+  Piece Yellow = Piece("Yellow", "\u001b[38;5;11m", {255, 220, 0},
                        {{true,  true, true},
                         {false, true, false}});
-  Piece Cyan = Piece("Cyan", "\u001b[38;5;45m", {51, 128, 255},
+  Piece Cyan = Piece("Cyan", "\u001b[38;5;45m", {51, 200, 255},
                      {{true, true,  true},
                       {true, false, false}});
   Piece Green = Piece("Green", "\u001b[38;5;22m", {0, 255, 0},

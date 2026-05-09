@@ -277,9 +277,9 @@ void SolverMenuScreen::drawGrid() {
 void SolverMenuScreen::renderCellFaded(int r, int c, float alpha) {
     int cellX = GRID_X + c * CELL_SIZE;
     int cellY = GRID_Y + r * CELL_SIZE;
-    _tft.fillRect(cellX + GRID_LINE_W, cellY + GRID_LINE_W,
-                  CELL_SIZE - GRID_LINE_W, CELL_SIZE - GRID_LINE_W, COL_BG);
     if (alpha > 0.02f) {
+        _tft.fillRect(cellX + GRID_LINE_W, cellY + GRID_LINE_W,
+                      CELL_SIZE - GRID_LINE_W, CELL_SIZE - GRID_LINE_W, COL_BG);
         uint16_t col = (alpha >= 0.99f) ? COL_BLOCKER
                                         : BorderAnimator::blendColor(COL_BG, COL_BLOCKER, alpha);
         _tft.fillCircle(cellX + CELL_SIZE / 2, cellY + CELL_SIZE / 2, CIRCLE_R, col);
@@ -298,6 +298,14 @@ void SolverMenuScreen::renderCellPiece(int r, int c) {
         uint16_t c565Darker = _tft.color565(col.r*0.85, col.g*0.85, col.b*0.85);
         _tft.fillRoundRect(rx, ry, PIECE_RECT_SIZE, PIECE_RECT_SIZE, PIECE_RECT_R, c565);
 
+        // Left connector: join to (r, c-1) if same piece
+        if (c > 0
+                && _solutionGrid[r][c-1] == _solutionGrid[r][c]
+                && !_grid[r][c-1]) {
+            _tft.fillRect(rx - CONNECTOR_GAP,
+                          ry + CONNECTOR_OFFSET,
+                          CONNECTOR_GAP, CONNECTOR_SIZE, c565Darker);
+        }
         // Right connector: join to (r, c+1) if same piece
         if (c < GRID_COLS - 1
                 && _solutionGrid[r][c+1] == _solutionGrid[r][c]
@@ -305,6 +313,14 @@ void SolverMenuScreen::renderCellPiece(int r, int c) {
             _tft.fillRect(rx + PIECE_RECT_SIZE,
                           ry + CONNECTOR_OFFSET,
                           CONNECTOR_GAP, CONNECTOR_SIZE, c565Darker);
+        }
+        // Top connector: join to (r-1, c) if same piece
+        if (r > 0
+                && _solutionGrid[r-1][c] == _solutionGrid[r][c]
+                && !_grid[r-1][c]) {
+            _tft.fillRect(rx + CONNECTOR_OFFSET,
+                          ry - CONNECTOR_GAP,
+                          CONNECTOR_SIZE, CONNECTOR_GAP, c565Darker);
         }
         // Bottom connector: join to (r+1, c) if same piece
         if (r < GRID_ROWS - 1
@@ -318,11 +334,13 @@ void SolverMenuScreen::renderCellPiece(int r, int c) {
         // Erase cell interior
         _tft.fillRect(cellX + GRID_LINE_W, cellY + GRID_LINE_W,
                       CELL_SIZE - GRID_LINE_W, CELL_SIZE - GRID_LINE_W, COL_BG);
-        // Restore grid lines that connectors may have overwritten
+        // Restore all grid lines that connectors may have overwritten
+        _tft.fillRect(cellX, cellY, GRID_LINE_W, CELL_SIZE, COL_GRID_LINE);  // Left
+        _tft.fillRect(cellX, cellY, CELL_SIZE, GRID_LINE_W, COL_GRID_LINE);  // Top
         if (c < GRID_COLS - 1)
-            _tft.fillRect(GRID_X + (c+1)*CELL_SIZE, cellY, GRID_LINE_W, CELL_SIZE, COL_GRID_LINE);
+            _tft.fillRect(GRID_X + (c+1)*CELL_SIZE, cellY, GRID_LINE_W, CELL_SIZE, COL_GRID_LINE);  // Right
         if (r < GRID_ROWS - 1)
-            _tft.fillRect(cellX, GRID_Y + (r+1)*CELL_SIZE, CELL_SIZE, GRID_LINE_W, COL_GRID_LINE);
+            _tft.fillRect(cellX, GRID_Y + (r+1)*CELL_SIZE, CELL_SIZE, GRID_LINE_W, COL_GRID_LINE);  // Bottom
     }
     // Blocker cells (_grid[r][c]==true) are handled by renderCellFaded — leave them alone.
 }
