@@ -195,7 +195,7 @@ void Board::addSolution(vector<vector<int>> solution) {
   solutions.push_back(solution);
 }
 
-vector<vector<int>> Board::getSpace() {
+vector<vector<int>> Board::getSpace() const {
   /**
    * Get the space array. It will need to be converted to a 2D vector of ints.
    *

@@ -1,12 +1,11 @@
 /*
  * Created by Ed Fillingham on 09/05/2026.
  *
- * Solver mode entry screen. Presents two horizontally split buttons (Solve / Back)
- * with an animated glow border on the selected one and a static dim border on the
- * other. Below the buttons:
+ * Solver mode entry screen. Single Back button (grid-width, left-aligned) with an
+ * animated glow border. The solver runs automatically when a valid 7-blocker
+ * arrangement is detected.
  *   Left panel  — 6×6 live grid with fading blocker circles (GridScanner, 200 ms poll).
- *   Right panel — state (size 2) + reason (size 1) header followed by
- *                 blocker coordinates as white dice-face tiles, 3 per row (max 9).
+ *   Right panel — state word + reason + blocker tile list, starting just below the title.
  */
 
 #ifndef SOLVER_MENU_SCREEN_H
@@ -53,19 +52,22 @@ private:
     SolverTask          _solver;
     std::vector<Coord>  _lastBlockers;
 
+    // ---- Solution display ----
+    int   _solutionGrid[6][6];   ///< UUID per cell from getSolutionGrid(); 0 = empty
+    bool  _showSolution;         ///< true once a solution has been copied and should be rendered
+    bool  _wasDone;              ///< previous isDone() value — used to detect rising edge
+    bool  _pieceDirty[6][6];    ///< cells needing a piece-rect redraw
+    uint8_t       _spinnerDots;  ///< 0–3: maps to "Solving." / "Solving.." / "Solving..." / "Solving.."
+    unsigned long _spinnerMs;    ///< millis() when _spinnerDots was last advanced
+
     // ---- Layout: buttons ----
     static constexpr int SCR_W          = 280;
     static constexpr int SCR_H          = 240;
     static constexpr int TITLE_H        = 30;
     static constexpr int MARGIN_X       = 14;
-    static constexpr int BUTTON_AREA_X  = MARGIN_X;
-    static constexpr int BUTTON_AREA_W  = SCR_W - 2 * MARGIN_X;
     static constexpr int BUTTON_PADDING = 10;
     static constexpr int BUTTON_H       = 32;
     static constexpr int BUTTON_Y       = TITLE_H + BUTTON_PADDING;
-    static constexpr int SOLVE_W        = (BUTTON_AREA_W * 3) / 4;
-    static constexpr int BACK_X         = BUTTON_AREA_X + SOLVE_W;
-    static constexpr int BACK_W         = BUTTON_AREA_W - SOLVE_W;
 
     // ---- Layout: grid ----
     static constexpr int   GRID_ROWS       = 6;
@@ -74,35 +76,40 @@ private:
     static constexpr int   GRID_LINE_W     = 2;
     static constexpr int   CELL_SIZE       = 24;
     static constexpr int   GRID_SIZE       = CELL_SIZE * GRID_ROWS;
-    static constexpr int   GRID_X          = BUTTON_AREA_X;
+    static constexpr int   BACK_W          = GRID_SIZE;       ///< Back button width matches grid
+    static constexpr int   BACK_X          = MARGIN_X;        ///< Back button left edge, aligned with grid
+    static constexpr int   GRID_X          = MARGIN_X;
     static constexpr int   GRID_Y          = BUTTON_Y + BUTTON_H + GRID_TOP_PAD;
     static constexpr int   CIRCLE_R        = 8;
     static constexpr float FADE_DURATION_S = 0.1f;
     static constexpr unsigned long SCAN_INTERVAL_MS = 200;
+    static constexpr int   PIECE_PAD        = 2;   ///< px between grid line and piece rect edge
+    static constexpr int   PIECE_RECT_SIZE  = CELL_SIZE - GRID_LINE_W - 2 * PIECE_PAD; ///< 18 px
+    static constexpr int   PIECE_RECT_R     = 3;   ///< corner radius of piece rect
+    static constexpr int   CONNECTOR_GAP    = GRID_LINE_W + 2 * PIECE_PAD; ///< 6px gap between adjacent rects
+    static constexpr int   CONNECTOR_SIZE   = (PIECE_RECT_SIZE * 4) / 5;   ///< 80% of rect edge = 14px
+    static constexpr int   CONNECTOR_OFFSET = (PIECE_RECT_SIZE - CONNECTOR_SIZE) / 2; ///< centering offset = 2px
+    static constexpr unsigned long SPINNER_INTERVAL_MS = 400;
 
     // ---- Layout: right panel ----
-    // PANEL_X starts immediately after the rightmost grid line (no extra gap) so that
-    // "Unsolvable" (10 chars × 12px = 120px) fits exactly to the screen edge (280px).
-    static constexpr int PANEL_X = GRID_X + GRID_SIZE + GRID_LINE_W;  ///< 160px
-    static constexpr int PANEL_W = SCR_W - PANEL_X;                   ///< 120px
-    static constexpr int PANEL_Y = GRID_Y;
+    static constexpr int PANEL_X = GRID_X + GRID_SIZE + GRID_LINE_W;          ///< 160px
+    static constexpr int PANEL_W = SCR_W - PANEL_X;                           ///< 120px
+    static constexpr int PANEL_Y = TITLE_H + 4;                               ///< 34px — starts just below title
+    static constexpr int PANEL_H = GRID_Y + GRID_SIZE + GRID_LINE_W - PANEL_Y; ///< 192px
 
-    // Status header: state word (size 2, 20px slot) + reason (size 1, 12px slot).
-    // Tile list always starts at TILE_LIST_Y regardless of solvability.
-    static constexpr int STATE_LINE_H  = 20;  ///< size-2 text (16px) + 4px gap
-    static constexpr int REASON_LINE_H = 20;  ///< size-2 text (16px) + 4px gap
-    static constexpr int TILE_LIST_Y   = PANEL_Y + STATE_LINE_H + REASON_LINE_H + 4;
+    // Status text: single line centred at button row, then tile list from GRID_Y down.
+    static constexpr int TILE_LIST_Y        = GRID_Y;  ///< 80px — aligns with grid top
 
-    // Tile dice rendering — 3 per row, max 9 (3 rows).
+    // Tile dice rendering — 2 per row, max 8 (4 rows).
     // *** Adjust TILE_LIST_CENTER_X to shift the tile columns left/right. ***
     static constexpr int TILE_LIST_CENTER_X = PANEL_X + PANEL_W / 2;  ///< 220 — adjustable
-    static constexpr int TILE_W             = 28;   ///< Width of one tile rounded-rect
-    static constexpr int TILE_H             = 22;   ///< Height of one tile rounded-rect
+    static constexpr int TILE_W             = 32;   ///< Width of one tile rounded-rect
+    static constexpr int TILE_H             = 32;   ///< Height of one tile rounded-rect
     static constexpr int TILE_R             = 4;    ///< Corner radius
-    static constexpr int TILE_GAP           = 6;    ///< Horizontal gap between tiles
-    static constexpr int TILE_ROW_H         = TILE_H + 4;  ///< Vertical pitch between tile rows (26px)
-    static constexpr int TILES_PER_ROW      = 3;
-    static constexpr int TILE_MAX           = 9;    ///< 3 rows × 3 per row
+    static constexpr int TILE_GAP           = 8;    ///< Horizontal gap between tiles
+    static constexpr int TILE_ROW_H         = TILE_H + 4;  ///< Vertical pitch between tile rows (36px)
+    static constexpr int TILES_PER_ROW      = 2;
+    static constexpr int TILE_MAX           = 8;    ///< 4 rows × 2 per row
 
     // ---- Colour palette (RGB565) ----
     static constexpr uint16_t COL_BG           = 0x0000;
@@ -112,7 +119,7 @@ private:
     static constexpr uint16_t COL_BORDER       = 0xFFFF;
     static constexpr uint16_t COL_BORDER_UNSEL = 0x4A49;
     static constexpr uint16_t COL_TITLE        = 0xAD75;
-    static constexpr uint16_t COL_GRID_LINE    = 0x2965;
+    static constexpr uint16_t COL_GRID_LINE    = 0x4A49;   ///< slightly brighter grid lines
     static constexpr uint16_t COL_BLOCKER      = 0xDDB4;
     static constexpr uint16_t COL_SOLVABLE     = 0x07E0;   ///< Green
     static constexpr uint16_t COL_UNSOLVABLE   = 0xF800;   ///< Red
@@ -134,6 +141,8 @@ private:
     void scanGrid();
     void drawGrid();
     void renderCellFaded(int r, int c, float alpha);
+    void renderCellPiece(int r, int c);
+    void clearSolution();
 
     // ---- Validity ----
     /** @brief Count blockers, run validCombination if count==6, update _solvable/_reason. */

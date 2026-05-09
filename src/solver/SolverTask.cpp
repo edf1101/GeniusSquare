@@ -74,12 +74,24 @@ void SolverTask::taskFn(void* param) {
 
     Serial.printf("[SolverTask] task running on Core %d\n", xPortGetCoreID());
 
+    // The solver monopolises Core 0 and starves the idle task, triggering
+    // the 5-second Task Watchdog Timer. Disable Core 0 WDT for the duration;
+    // the solver has its own time limit via Board::getOutOfTime().
+    disableCore0WDT();
     bool solved = self->_board->solve();
+    enableCore0WDT();
     self->_foundSolution.store(solved);
 
-    if (solved) self->_board->printSolution();
+    if (solved) {
+        self->_solutionGrid = self->_board->getSpace();
+        self->_board->printSolution();
+    }
 
     self->_done.store(true, std::memory_order_release);
     xSemaphoreGive(self->_doneSem);
     vTaskDelete(NULL); // FreeRTOS tasks must not return
+}
+
+std::vector<std::vector<int>> SolverTask::getSolutionGrid() const {
+    return _solutionGrid;
 }

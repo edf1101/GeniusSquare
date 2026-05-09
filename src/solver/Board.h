@@ -36,6 +36,9 @@ public:
     /** @brief Print the current board state (solution) to the Serial monitor. */
     void printSolution();
 
+    /** @brief Returns the current board grid (UUID per cell, 0 = empty). */
+    vector<vector<int>> getSpace() const;
+
     ~Board();
 
 private:
@@ -53,8 +56,6 @@ private:
     Piece *getPiece(int uuid);
 
     int pieceFitsAtSpace(Coord coord, Piece piece);
-
-    vector<vector<int>> getSpace();
 
     bool recursiveSolve(Board *rootBoard, vector<Piece> remainingPieces);
 

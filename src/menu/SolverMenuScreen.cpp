@@ -1,21 +1,21 @@
 /*
  * Created by Ed Fillingham on 09/05/2026.
  *
- * SolverMenuScreen — two-button entry screen for solver mode.
+ * SolverMenuScreen — single Back button, auto-solving on valid arrangements.
  *
  * Layout (landscape 280×240):
  * - Title bar: 30px
- * - Button row (32px, 10px below title): Solve | Back
+ * - Back button (32px, 10px below title, grid-width): x=14, w=144
  * - Left (x=14, y=80): 144×144 live grid, beige circles fade 100 ms
- * - Right (x=160, y=80, 120px wide):
- *     State word (size 2, 20px): "Solvable" (green) OR "Unsolvable" (red)
- *     Reason (size 1, 12px): "Too few" / "Too many" / "Invalid" / blank
- *     y=116+: blocker tiles as white rounded-rect dice faces, 3 per row, max 9
+ * - Right (x=160, 120px wide):
+ *     Status line centred at button row: reason (red) or Solving.../Solved!/No sln (green/red)
+ *     Blocker tile list from y=80: white rounded-rect dice faces, 2 per row, max 8
  */
 
 #include "menu/SolverMenuScreen.h"
 #include "hardware/GridScanner.h"
 #include "solver/CombinationGenerator.h"
+#include "solver/Piece.h"
 #include <math.h>
 #include <string.h>
 #include <vector>
@@ -25,16 +25,20 @@ SolverMenuScreen::SolverMenuScreen(TFT_eSPI& tft, ScreenManager& manager)
       _selectedIndex(0),
       _lastMs(millis()), _dirty(false),
       _panelDirty(false), _solvable(false),
-      _lastScanMs(0)
+      _lastScanMs(0),
+      _showSolution(false), _wasDone(true),
+      _spinnerDots(0), _spinnerMs(0)
 {
-    memset(_grid,      0, sizeof(_grid));
-    memset(_cellAlpha, 0, sizeof(_cellAlpha));
-    memset(_cellDirty, 0, sizeof(_cellDirty));
+    memset(_grid,        0, sizeof(_grid));
+    memset(_cellAlpha,   0, sizeof(_cellAlpha));
+    memset(_cellDirty,   0, sizeof(_cellDirty));
+    memset(_solutionGrid,0, sizeof(_solutionGrid));
+    memset(_pieceDirty,  0, sizeof(_pieceDirty));
     _reason[0] = '\0';
 }
 
-int SolverMenuScreen::buttonX(uint8_t index) const { return (index == 0) ? BUTTON_AREA_X : BACK_X; }
-int SolverMenuScreen::buttonW(uint8_t index) const { return (index == 0) ? SOLVE_W : BACK_W; }
+int SolverMenuScreen::buttonX(uint8_t /*index*/) const { return BACK_X; }
+int SolverMenuScreen::buttonW(uint8_t /*index*/) const { return BACK_W; }
 
 // ---- Lifecycle ----
 
@@ -46,10 +50,16 @@ void SolverMenuScreen::onEnter() {
     _panelDirty  = false;
     _lastScanMs  = millis() - SCAN_INTERVAL_MS;
 
-    memset(_grid,      0, sizeof(_grid));
-    memset(_cellAlpha, 0, sizeof(_cellAlpha));
-    memset(_cellDirty, 0, sizeof(_cellDirty));
-    _reason[0] = '\0';
+    memset(_grid,        0, sizeof(_grid));
+    memset(_cellAlpha,   0, sizeof(_cellAlpha));
+    memset(_cellDirty,   0, sizeof(_cellDirty));
+    memset(_solutionGrid,0, sizeof(_solutionGrid));
+    memset(_pieceDirty,  0, sizeof(_pieceDirty));
+    _reason[0]     = '\0';
+    _showSolution  = false;
+    _wasDone       = true;
+    _spinnerDots   = 0;
+    _spinnerMs     = millis();
 
     _tft.fillScreen(COL_BG);
     drawTitleBar();
@@ -73,10 +83,16 @@ void SolverMenuScreen::onResume() {
     _panelDirty  = false;
     _lastScanMs  = millis() - SCAN_INTERVAL_MS;
 
-    memset(_grid,      0, sizeof(_grid));
-    memset(_cellAlpha, 0, sizeof(_cellAlpha));
-    memset(_cellDirty, 0, sizeof(_cellDirty));
-    _reason[0] = '\0';
+    memset(_grid,        0, sizeof(_grid));
+    memset(_cellAlpha,   0, sizeof(_cellAlpha));
+    memset(_cellDirty,   0, sizeof(_cellDirty));
+    memset(_solutionGrid,0, sizeof(_solutionGrid));
+    memset(_pieceDirty,  0, sizeof(_pieceDirty));
+    _reason[0]     = '\0';
+    _showSolution  = false;
+    _wasDone       = true;
+    _spinnerDots   = 0;
+    _spinnerMs     = millis();
 
     _tft.fillScreen(COL_BG);
     drawTitleBar();
@@ -110,6 +126,31 @@ void SolverMenuScreen::update() {
             _cellDirty[r][c] = true;
         }
     }
+
+    // Solution-copy: detect isDone() rising edge
+    bool nowDone = _solver.isDone();
+    if (nowDone && !_wasDone) {
+        if (_solver.hasSolution()) {
+            auto grid = _solver.getSolutionGrid();
+            for (int r = 0; r < GRID_ROWS; r++)
+                for (int c = 0; c < GRID_COLS; c++) {
+                    _solutionGrid[r][c] = grid[r][c];
+                    _pieceDirty[r][c]   = true;
+                }
+            _showSolution = true;
+        }
+        _panelDirty = true;
+    }
+    _wasDone = nowDone;
+
+    // Spinner: advance dot count while solve is in progress
+    if (_solvable && !nowDone) {
+        if (now - _spinnerMs >= SPINNER_INTERVAL_MS) {
+            _spinnerMs   = now;
+            _spinnerDots = (_spinnerDots + 1) % 4;
+            _panelDirty  = true;
+        }
+    }
 }
 
 void SolverMenuScreen::render() {
@@ -118,6 +159,10 @@ void SolverMenuScreen::render() {
             if (_cellDirty[r][c]) {
                 _cellDirty[r][c] = false;
                 renderCellFaded(r, c, _cellAlpha[r][c]);
+            }
+            if (_pieceDirty[r][c]) {
+                _pieceDirty[r][c] = false;
+                renderCellPiece(r, c);
             }
         }
     }
@@ -134,25 +179,10 @@ void SolverMenuScreen::render() {
 
 // ---- Input ----
 
-void SolverMenuScreen::onEncoderChange(int delta) {
-    uint8_t prev = _selectedIndex;
-    int next = (int)_selectedIndex + delta;
-    if (next < 0) next = 0;
-    if (next > 1) next = 1;
-    _selectedIndex = (uint8_t)next;
-    if (_selectedIndex == prev) return;
-
-    eraseBorder(prev);
-    drawButton(buttonX(prev),           buttonW(prev),           prev == 0 ? "Solve" : "Back", false);
-    drawButton(buttonX(_selectedIndex), buttonW(_selectedIndex), _selectedIndex == 0 ? "Solve" : "Back", true);
-    drawDeselectedBorder(buttonX(prev), buttonW(prev));
-    eraseDeselectedBorder(buttonX(_selectedIndex), buttonW(_selectedIndex));
-    _border.reset();
-}
+void SolverMenuScreen::onEncoderChange(int /*delta*/) {}
 
 void SolverMenuScreen::onButtonPress() {
-    if (_selectedIndex == 1) _manager.pop();
-    // Solve: no-op for now
+    _manager.pop();
 }
 
 // ---- Button drawing ----
@@ -167,11 +197,7 @@ void SolverMenuScreen::drawTitleBar() {
 }
 
 void SolverMenuScreen::drawButtons() {
-    drawButton(BUTTON_AREA_X, SOLVE_W, "Solve", _selectedIndex == 0);
-    drawButton(BACK_X,        BACK_W,  "Back",  _selectedIndex == 1);
-    _tft.drawFastVLine(BACK_X, BUTTON_Y, BUTTON_H, COL_DIVIDER);
-    uint8_t unsel = (_selectedIndex == 0) ? 1 : 0;
-    drawDeselectedBorder(buttonX(unsel), buttonW(unsel));
+    drawButton(BACK_X, BACK_W, "Back", true);
 }
 
 void SolverMenuScreen::drawButton(int x, int w, const char* label, bool selected) {
@@ -260,6 +286,47 @@ void SolverMenuScreen::renderCellFaded(int r, int c, float alpha) {
     }
 }
 
+void SolverMenuScreen::renderCellPiece(int r, int c) {
+    int cellX = GRID_X + c * CELL_SIZE;
+    int cellY = GRID_Y + r * CELL_SIZE;
+    int rx    = cellX + GRID_LINE_W + PIECE_PAD;
+    int ry    = cellY + GRID_LINE_W + PIECE_PAD;
+
+    if (_showSolution && _solutionGrid[r][c] != 0 && !_grid[r][c]) {
+        Colour col    = Piece::getPieceColourByUUID(_solutionGrid[r][c]);
+        uint16_t c565 = _tft.color565(col.r, col.g, col.b);
+        uint16_t c565Darker = _tft.color565(col.r*0.85, col.g*0.85, col.b*0.85);
+        _tft.fillRoundRect(rx, ry, PIECE_RECT_SIZE, PIECE_RECT_SIZE, PIECE_RECT_R, c565);
+
+        // Right connector: join to (r, c+1) if same piece
+        if (c < GRID_COLS - 1
+                && _solutionGrid[r][c+1] == _solutionGrid[r][c]
+                && !_grid[r][c+1]) {
+            _tft.fillRect(rx + PIECE_RECT_SIZE,
+                          ry + CONNECTOR_OFFSET,
+                          CONNECTOR_GAP, CONNECTOR_SIZE, c565Darker);
+        }
+        // Bottom connector: join to (r+1, c) if same piece
+        if (r < GRID_ROWS - 1
+                && _solutionGrid[r+1][c] == _solutionGrid[r][c]
+                && !_grid[r+1][c]) {
+            _tft.fillRect(rx + CONNECTOR_OFFSET,
+                          ry + PIECE_RECT_SIZE,
+                          CONNECTOR_SIZE, CONNECTOR_GAP, c565Darker);
+        }
+    } else if (!_grid[r][c]) {
+        // Erase cell interior
+        _tft.fillRect(cellX + GRID_LINE_W, cellY + GRID_LINE_W,
+                      CELL_SIZE - GRID_LINE_W, CELL_SIZE - GRID_LINE_W, COL_BG);
+        // Restore grid lines that connectors may have overwritten
+        if (c < GRID_COLS - 1)
+            _tft.fillRect(GRID_X + (c+1)*CELL_SIZE, cellY, GRID_LINE_W, CELL_SIZE, COL_GRID_LINE);
+        if (r < GRID_ROWS - 1)
+            _tft.fillRect(cellX, GRID_Y + (r+1)*CELL_SIZE, CELL_SIZE, GRID_LINE_W, COL_GRID_LINE);
+    }
+    // Blocker cells (_grid[r][c]==true) are handled by renderCellFaded — leave them alone.
+}
+
 // ---- Validity ----
 
 void SolverMenuScreen::checkValidity() {
@@ -296,43 +363,63 @@ void SolverMenuScreen::checkValidity() {
     if (_solvable) {
         if (coords != _lastBlockers) {
             Serial.println("[SolverMenu] Valid arrangement detected, starting solve");
+            clearSolution();
+            _wasDone    = true;   // reset edge detector for new solve
+            _spinnerDots = 0;
+            _spinnerMs   = millis();
             _lastBlockers = coords;
             _solver.start(coords);
         }
     } else {
         if (!_lastBlockers.empty()) {
             Serial.println("[SolverMenu] Arrangement changed/invalid, stopping solve");
+            clearSolution();
             _solver.stop();
             _lastBlockers.clear();
         }
     }
 }
 
+void SolverMenuScreen::clearSolution() {
+    memset(_solutionGrid, 0, sizeof(_solutionGrid));
+    if (!_showSolution) return;
+    _showSolution = false;
+    for (int r = 0; r < GRID_ROWS; r++)
+        for (int c = 0; c < GRID_COLS; c++)
+            _pieceDirty[r][c] = true;
+    _panelDirty = true;
+}
+
 // ---- Side panel ----
 
 void SolverMenuScreen::drawSidePanel() {
-    _tft.fillRect(PANEL_X, PANEL_Y, PANEL_W, GRID_SIZE + GRID_LINE_W, COL_BG);
+    _tft.fillRect(PANEL_X, PANEL_Y, PANEL_W, PANEL_H, COL_BG);
 
-    // --- State word (size 2) ---
-    int y = PANEL_Y + 2;
-    _tft.setTextSize(2);
-    if (_solvable) {
-        _tft.setTextColor(COL_SOLVABLE, COL_BG);
-        _tft.setCursor(PANEL_X, y);
-        _tft.print("Solvable");
+    // --- Single status line centred at the Back button row ---
+    static const char* spinLabels[4] = { "Solving.", "Solving..", "Solving...", "Solving.." };
+    const char* label;
+    uint16_t    labelCol;
+    if (!_solvable) {
+        label    = (_reason[0] != '\0') ? _reason : "...";
+        labelCol = COL_UNSOLVABLE;
+    } else if (!_solver.isDone()) {
+        label    = spinLabels[_spinnerDots];
+        labelCol = COL_SOLVABLE;
+    } else if (_showSolution) {
+        label    = "Solved!";
+        labelCol = COL_SOLVABLE;
     } else {
-        _tft.setTextColor(COL_UNSOLVABLE, COL_BG);
-        _tft.setCursor(PANEL_X, y);
-        _tft.print("Unsolvable");
-        // Reason (size 2, below state word)
-        if (_reason[0] != '\0') {
-            _tft.setTextSize(2);
-            _tft.setCursor(PANEL_X, y + STATE_LINE_H);
-            _tft.print(_reason);
-        }
+        label    = "No sln";
+        labelCol = COL_UNSOLVABLE;
     }
+    _tft.setTextSize(2);
+    _tft.setTextColor(labelCol, COL_BG);
+    int statusX = PANEL_X + (PANEL_W - (int)strlen(label) * 12) / 2;
+    int statusY = BUTTON_Y + (BUTTON_H - 16) / 2;
+    _tft.setCursor(statusX, statusY);
+    _tft.print(label);
 
-    // --- Tile list: 3 per row, max TILE_MAX ---
+    // --- Tile list: 2 per row, max TILE_MAX ---
     const int leftmost = TILE_LIST_CENTER_X - (TILES_PER_ROW * TILE_W + (TILES_PER_ROW - 1) * TILE_GAP) / 2;
 
     int tileY = TILE_LIST_Y;
@@ -365,7 +452,7 @@ void SolverMenuScreen::drawTile(int x, int y, int r, int c) {
     char buf[3] = { (char)('A' + r), (char)('1' + c), '\0' };
     _tft.setTextColor(COL_TILE_TEXT, COL_TILE_BG);
     _tft.setTextSize(2);
-    int tx = x + (TILE_W - 22) / 2;   // 2 chars × 12px = 24px
+    int tx = x + (TILE_W - 24) / 2;   // 2 chars × 12px = 24px
     int ty = y + (TILE_H - 16) / 2;   // text height at size 2 = 16px
     _tft.setCursor(tx, ty);
     _tft.print(buf);

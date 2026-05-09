@@ -32,6 +32,9 @@ public:
     /** @brief True if the last solve found a solution. */
     bool hasSolution() const;
 
+    /** @brief Returns the solved board grid (UUID per cell, 0 = empty). Valid only when hasSolution() is true. Call once on the done rising edge — not per frame. */
+    std::vector<std::vector<int>> getSolutionGrid() const;
+
 private:
     static void taskFn(void* param);
 
@@ -40,9 +43,10 @@ private:
     SemaphoreHandle_t _doneSem        = nullptr;
     std::atomic<bool> _done{false};
     std::atomic<bool> _foundSolution{false};
+    std::vector<std::vector<int>> _solutionGrid;
     bool              _active         = false;    // Core 1 only — not accessed cross-core
 
-    static constexpr int   TASK_STACK_SIZE  = 8192;
+    static constexpr int   TASK_STACK_SIZE  = 16384;
     static constexpr int   TASK_PRIORITY    = 1;
     static constexpr int   TASK_CORE        = 0;
     static constexpr int   SOLUTION_LIMIT   = 1;
