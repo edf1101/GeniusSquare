@@ -6,7 +6,7 @@
  * Call poll() each loop iteration to check for changes.
  */
 
-#include "RotaryWrapper.h"
+#include "../RotaryWrapper.h"
 #include <utility>
 
 /**
