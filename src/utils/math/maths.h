@@ -13,6 +13,8 @@
 #include <vector>
 #include <string>
 
+struct Coord; // forward declaration for Maths::coordsToString
+
 class Maths {
 public:
     // Template function to flip a 2D vector horizontally (like numpy's fliplr)
@@ -26,6 +28,9 @@ public:
     // Template function to print a 2D vector to the serial monitor
     template <typename T>
     static std::string MatAsString(const std::vector<std::vector<T>>& matrix);
+
+    // Template function to convert a vector of Coord to a bracketed comma-separated string, e.g. "[(0, 1), (2, 3)]"
+    static std::string coordsToString(const std::vector<Coord>& coords);
 };
 
 #include "maths.tpp" // Ensure this is included
@@ -58,5 +63,15 @@ struct Colour {
     }
 
 };
+
+inline std::string Maths::coordsToString(const std::vector<Coord>& coords) {
+    std::string s = "[";
+    for (size_t i = 0; i < coords.size(); i++) {
+        s += coords[i].toString();
+        if (i + 1 < coords.size()) s += ", ";
+    }
+    s += "]";
+    return s;
+}
 
 #endif //GENIUS_SQUARE_ARDUINO_MATHS_H
