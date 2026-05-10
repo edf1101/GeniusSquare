@@ -7,6 +7,7 @@
 #include "menu/PracticeGameScreen.h"
 #include "menu/PracticeScoreScreen.h"
 #include "hardware/GridScanner.h"
+#include "utils/PracticeScores.h"
 #include <cstring>
 #include <cstdio>
 #include <math.h>
@@ -398,6 +399,9 @@ void PracticeGameScreen::finishGame() {
         && (*_bestSeconds <= 0.0f || _elapsedSeconds < *_bestSeconds);
     if (isNewBest) {
         *_bestSeconds = _elapsedSeconds;
+        uint8_t toStore = (_elapsedSeconds >= 255.0f) ? 255u : (uint8_t)_elapsedSeconds;
+        if (toStore == 0) toStore = 1;  // 0 is reserved as "no score"
+        PracticeScores::save(_arrangementIndex, toStore);
     }
     float best = (_bestSeconds != nullptr) ? *_bestSeconds : 0.0f;
     _scoreScreen.setResult(_elapsedSeconds, best, isNewBest);

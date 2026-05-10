@@ -20,6 +20,7 @@
 #include "hardware/GridScanner.h"
 #include "menu/PracticeGameScreen.h"
 #include "menu/PracticeScoreScreen.h"
+#include "utils/PracticeScores.h"
 
 // ---- Hardware pins ----
 // Rotary encoder pins connected to ESP32-S3 using PCNT hardware counter
@@ -115,6 +116,9 @@ void setup() {
     // GridScanner handles ADC configuration
     GridScanner::init();
 
+    // Initialise EEPROM backing store for practice best scores.
+    PracticeScores::init(PRACTICE_ITEM_COUNT);
+
     // Attach rotary encoder callback. Negated delta so CW rotation = positive delta.
     // (ESP32Encoder convention is CW = negative, but UI convention is CW = +1)
     rot.setCallbackFunc([](long delta) {
@@ -130,7 +134,8 @@ void setup() {
             case PuzzleDifficulty::EASY:   practiceItems[i].difficulty = Difficulty::EASY; break;
             default:                       practiceItems[i].difficulty = Difficulty::EASY; break;
         }
-        practiceItems[i].seconds     = 0.0f;
+        uint8_t stored = PracticeScores::load(i);
+        practiceItems[i].seconds = (stored > 0) ? (float)stored : 0.0f;
         practiceItems[i].arrangement = CombinationGenerator::generateCombinations(i);
         practiceItems[i].action      = [i](ScreenManager& mgr) {
             practiceGame.setArrangement(i, practiceItems[i].arrangement, &practiceItems[i].seconds);
