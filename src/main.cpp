@@ -18,6 +18,8 @@
 #include "solver/CombinationGenerator.h"
 #include "solver/DifficultyLookup.h"
 #include "hardware/GridScanner.h"
+#include "menu/PracticeGameScreen.h"
+#include "menu/PracticeScoreScreen.h"
 
 // ---- Hardware pins ----
 // Rotary encoder pins connected to ESP32-S3 using PCNT hardware counter
@@ -60,6 +62,12 @@ ArrangementItem practiceItems[PRACTICE_ITEM_COUNT];
 
 /// Practice arrangement selection screen
 ArrangementMenuScreen practiceMenu(tft, screenManager, practiceItems, PRACTICE_ITEM_COUNT, "Practice");
+
+/// Score screen shown after a practice game ends
+PracticeScoreScreen practiceScore(tft, screenManager);
+
+/// Active practice game screen — configured via setArrangement() before push
+PracticeGameScreen practiceGame(tft, screenManager, practiceScore);
 
 /// Button input with 50ms debounce; reports presses to ScreenManager
 ButtonWrapper button(BTN_PIN, []() { screenManager.onButtonPress(); },[]() { });
@@ -124,7 +132,10 @@ void setup() {
         }
         practiceItems[i].seconds     = 0.0f;
         practiceItems[i].arrangement = CombinationGenerator::generateCombinations(i);
-        practiceItems[i].action      = [](ScreenManager&) {};
+        practiceItems[i].action      = [i](ScreenManager& mgr) {
+            practiceGame.setArrangement(i, practiceItems[i].arrangement, &practiceItems[i].seconds);
+            mgr.push(&practiceGame);
+        };
     }
 
     // Push main menu screen to kick off the UI.

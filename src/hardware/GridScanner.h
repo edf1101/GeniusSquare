@@ -36,7 +36,7 @@ namespace GridScanner {
      * @param threshold Values >= threshold map to true. Default 0.122f (≈ 500/4095).
      * @return 6×6 vector of bools. Outer index is row, inner index is column.
      */
-    std::vector<std::vector<bool>> digitalReadMatrix(float threshold = 0.122f);
+    std::vector<std::vector<bool>> digitalReadMatrix(float threshold = 0.08f);
 
 } // namespace GridScanner
 

@@ -8,6 +8,7 @@
 #define ARRANGEMENT_ITEM_H
 
 #include <vector>
+#include <functional>
 #include "utils/math/maths.h"  // Coord
 
 class ScreenManager; // forward declaration
@@ -24,7 +25,7 @@ struct ArrangementItem {
     Difficulty          difficulty;   ///< Difficulty label displayed on the row
     float               seconds;      ///< Previous best score (0.0f = no score → "--:--")
     std::vector<Coord>  arrangement;  ///< Exactly 7 blocker coordinates for the grid preview
-    void (*action)(ScreenManager&);   ///< Called when this item is confirmed
+    std::function<void(ScreenManager&)> action;  ///< Called when this item is confirmed
 };
 
 #endif // ARRANGEMENT_ITEM_H
