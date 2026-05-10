@@ -35,10 +35,15 @@ SolverMenuScreen::SolverMenuScreen(TFT_eSPI& tft, ScreenManager& manager)
     memset(_solutionGrid,0, sizeof(_solutionGrid));
     memset(_pieceDirty,  0, sizeof(_pieceDirty));
     _reason[0] = '\0';
+    _locked = false;
 }
 
-int SolverMenuScreen::buttonX(uint8_t /*index*/) const { return BACK_X; }
-int SolverMenuScreen::buttonW(uint8_t /*index*/) const { return BACK_W; }
+int SolverMenuScreen::buttonX(uint8_t index) const {
+    return (index == 0) ? GRID_X : BTN_LOCK_X;
+}
+int SolverMenuScreen::buttonW(uint8_t index) const {
+    return (index == 0) ? BTN_BACK_W : BTN_LOCK_W;
+}
 
 // ---- Lifecycle ----
 
@@ -49,6 +54,7 @@ void SolverMenuScreen::onEnter() {
     _dirty       = false;
     _panelDirty  = false;
     _lastScanMs  = millis() - SCAN_INTERVAL_MS;
+    _locked = false;
 
     memset(_grid,        0, sizeof(_grid));
     memset(_cellAlpha,   0, sizeof(_cellAlpha));
@@ -101,6 +107,7 @@ void SolverMenuScreen::onResume() {
     scanGrid();
     drawSidePanel();
     _lastScanMs = millis();
+    _locked = false;
 }
 
 void SolverMenuScreen::update() {
@@ -179,10 +186,43 @@ void SolverMenuScreen::render() {
 
 // ---- Input ----
 
-void SolverMenuScreen::onEncoderChange(int /*delta*/) {}
+void SolverMenuScreen::onEncoderChange(int delta) {
+    uint8_t oldIndex = _selectedIndex;
+
+    if (delta > 0) _selectedIndex = 1;
+    else if (delta < 0) _selectedIndex = 0;
+
+    if (oldIndex != _selectedIndex) {
+        // Erase old border and redraw old button unselected
+        eraseBorder(oldIndex);
+        if (oldIndex == 0) {
+            drawButton(buttonX(0), buttonW(0), "Back", false);
+        } else {
+            drawButton(buttonX(1), buttonW(1), _locked ? "Unlock" : "Lock", false);
+        }
+
+        // Draw new button selected
+        if (_selectedIndex == 0) {
+            drawButton(buttonX(0), buttonW(0), "Back", true);
+        } else {
+            drawButton(buttonX(1), buttonW(1), _locked ? "Unlock" : "Lock", true);
+        }
+
+        _border.reset();
+        _dirty = true;
+    }
+}
+
 
 void SolverMenuScreen::onButtonPress() {
-    _manager.pop();
+    if (_selectedIndex == 0) {
+        _manager.pop();
+    } else {
+        _locked = !_locked;
+        drawButtons();          // Redraw to change text between Lock/Unlock
+        _border.reset();        // Reset animation for visual feedback
+        _dirty = true;
+    }
 }
 
 // ---- Button drawing ----
@@ -197,9 +237,9 @@ void SolverMenuScreen::drawTitleBar() {
 }
 
 void SolverMenuScreen::drawButtons() {
-    drawButton(BACK_X, BACK_W, "Back", true);
+    drawButton(buttonX(0), buttonW(0), "Back", _selectedIndex == 0);
+    drawButton(buttonX(1), buttonW(1), _locked ? "Unlock" : "Lock", _selectedIndex == 1);
 }
-
 void SolverMenuScreen::drawButton(int x, int w, const char* label, bool selected) {
     _tft.fillRect(x, BUTTON_Y, w, BUTTON_H, COL_BG);
     _tft.setTextColor(selected ? COL_TEXT_SEL : COL_TEXT_UNSEL, COL_BG);
@@ -254,6 +294,10 @@ void SolverMenuScreen::eraseBorder(uint8_t index) {
 // ---- Grid ----
 
 void SolverMenuScreen::scanGrid() {
+    // If locked, completely ignore the hardware sensors.
+    // The digital board state remains frozen.
+    if (_locked) return;
+
     auto result = GridScanner::digitalReadMatrix();
     for (int r = 0; r < GRID_ROWS; r++) {
         for (int c = 0; c < GRID_COLS; c++) {

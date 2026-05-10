@@ -39,6 +39,8 @@ private:
     unsigned long  _lastMs;
     bool           _dirty;
 
+    bool  _locked;
+
     // ---- Grid / scan state ----
     bool  _grid[6][6];
     float _cellAlpha[6][6];
@@ -76,8 +78,12 @@ private:
     static constexpr int   GRID_LINE_W     = 2;
     static constexpr int   CELL_SIZE       = 24;
     static constexpr int   GRID_SIZE       = CELL_SIZE * GRID_ROWS;
-    static constexpr int   BACK_W          = GRID_SIZE;       ///< Back button width matches grid
-    static constexpr int   BACK_X          = MARGIN_X;        ///< Back button left edge, aligned with grid
+
+    static constexpr int   BTN_BACK_W      = 54;
+    static constexpr int   BTN_GAP         = 10;
+    static constexpr int   BTN_LOCK_X      = MARGIN_X + BTN_BACK_W + BTN_GAP;
+    static constexpr int   BTN_LOCK_W      = GRID_SIZE - BTN_BACK_W - BTN_GAP; // 80px
+
     static constexpr int   GRID_X          = MARGIN_X;
     static constexpr int   GRID_Y          = BUTTON_Y + BUTTON_H + GRID_TOP_PAD;
     static constexpr int   CIRCLE_R        = 8;
