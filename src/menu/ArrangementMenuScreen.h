@@ -23,7 +23,7 @@
 #include "menu/ScreenManager.h"
 #include "menu/BorderAnimator.h"
 #include "menu/ArrangementItem.h"
-#include "utils/math/maths.h"
+#include "../utils/maths.h"
 
 class ArrangementMenuScreen : public Screen {
 public:

@@ -17,7 +17,7 @@
 #include "menu/ArrangementMenuScreen.h"
 #include "solver/CombinationGenerator.h"
 #include "solver/DifficultyLookup.h"
-#include "hardware/GridScanner.h"
+#include "utils/GridScanner.h"
 #include "menu/PracticeGameScreen.h"
 #include "menu/PracticeScoreScreen.h"
 #include "utils/PracticeScores.h"

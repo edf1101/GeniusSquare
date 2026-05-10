@@ -9,7 +9,7 @@
 
 #include <vector>
 #include <functional>
-#include "utils/math/maths.h"  // Coord
+#include "../utils/maths.h"
 
 class ScreenManager; // forward declaration
 

@@ -23,7 +23,7 @@
 #include "menu/Screen.h"
 #include "menu/ScreenManager.h"
 #include "menu/BorderAnimator.h"
-#include "utils/math/maths.h"
+#include "../utils/maths.h"
 
 class PracticeScoreScreen;  // forward declaration — full include in .cpp
 

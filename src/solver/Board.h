@@ -11,7 +11,7 @@
 #include <vector>
 #include <string>
 
-#include "utils/math/maths.h"
+#include "../utils/maths.h"
 
 #include "Piece.h"
 

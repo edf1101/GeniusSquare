@@ -6,7 +6,7 @@
 
 #include "menu/PracticeGameScreen.h"
 #include "menu/PracticeScoreScreen.h"
-#include "hardware/GridScanner.h"
+#include "../utils/GridScanner.h"
 #include "utils/PracticeScores.h"
 #include <cstring>
 #include <cstdio>

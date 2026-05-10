@@ -12,7 +12,7 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/semphr.h"
-#include "utils/math/maths.h"
+#include "../utils/maths.h"
 #include "solver/Board.h"
 
 class SolverTask {

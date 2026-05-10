@@ -33,7 +33,7 @@ public:
     static std::string coordsToString(const std::vector<Coord>& coords);
 };
 
-#include "maths.tpp" // Ensure this is included
+#include "maths.tpp"
 
 struct Coord {
     // The coordinates of a point

@@ -6,7 +6,7 @@
 
 #include <utility>
 
-#include "utils/math/maths.h"
+#include "../utils/maths.h"
 
 
 set<int> Piece::uuids; // initialise the static variable here as can't in header file.
