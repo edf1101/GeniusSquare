@@ -13,6 +13,7 @@
 class ButtonWrapper {
 public:
     ButtonWrapper(uint8_t pin, std::function<void()> onRelease, std::function<void()> onLongRelease = nullptr);
+    unsigned long getLastActivity() const;
     void poll();
 
 private:
@@ -27,6 +28,7 @@ private:
 
     static constexpr unsigned long DEBOUNCE_MS = 50;
     static constexpr unsigned long LONG_PRESS_MS = 800; // Threshold for long press
+
 };
 
 #endif // BUTTON_WRAPPER_H

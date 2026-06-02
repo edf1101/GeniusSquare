@@ -17,9 +17,11 @@
  *
  * @param inputA First encoder pin (typically CLK).
  * @param inputB Second encoder pin (typically DT).
+ * @param reverse Optional flag to reverse the direction of the delta (CW vs CCW). Default false.
  */
-RotaryWrapper::RotaryWrapper(uint8_t inputA, uint8_t inputB) {
+RotaryWrapper::RotaryWrapper(uint8_t inputA, uint8_t inputB, bool reverse) {
     myEncoder.attachHalfQuad(inputA, inputB);
+    this->reverse = reverse;
 }
 
 /**
@@ -83,6 +85,10 @@ void RotaryWrapper::poll() {
     if (abs(diff) >= 2) {
         lastCount = count;
         diff /= 2;  // Convert from half-quad ticks to detent steps
+
+        if (reverse) {
+            diff = -diff;  // Optionally reverse direction if configured
+        }
 
         callCallbackFunc(diff);
         lastActivity = millis();

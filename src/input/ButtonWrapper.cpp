@@ -44,3 +44,7 @@ void ButtonWrapper::poll() {
         }
     }
 }
+
+unsigned long ButtonWrapper::getLastActivity() const {
+    return _lastTransitionTime;
+}

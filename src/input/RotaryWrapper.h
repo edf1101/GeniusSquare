@@ -29,7 +29,7 @@ public:
      * @param inputA First encoder pin (CLK).
      * @param inputB Second encoder pin (DT).
      */
-    RotaryWrapper(uint8_t inputA, uint8_t inputB);
+    RotaryWrapper(uint8_t inputA, uint8_t inputB, bool reverse = false);
 
     /**
      * @brief Register a callback to fire when encoder steps are detected.
@@ -72,6 +72,9 @@ private:
 
     /// Previous PCNT counter value (used to detect changes)
     int64_t lastCount = 0;
+
+    /// Optional flag to reverse the direction of the encoder (CW vs CCW)
+    bool reverse = false;
 };
 
 #endif // ROTARY_ROTARY_H

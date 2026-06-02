@@ -27,13 +27,16 @@
 #define ROT_A    17  ///< Rotary encoder A pin
 #define ROT_B    18  ///< Rotary encoder B pin
 #define BTN_PIN  16  ///< Button pin (active LOW, internally pulled up)
+#define LATCH_PIN 21
+
+#define NO_ACTVITY_TIMEOUT_S (60*5)
 
 // ---- Hardware objects ----
 /// Shared TFT_eSPI display instance (240×280 landscape after rotation)
 TFT_eSPI tft = TFT_eSPI();
 
 /// Rotary encoder wrapper; provides delta-based callback on half-quad ticks
-RotaryWrapper rot(ROT_A, ROT_B);
+RotaryWrapper rot(ROT_A, ROT_B, true);
 
 // ---- Application ----
 /// Screen stack manager — owns all active screens and forwards input events
@@ -42,17 +45,17 @@ ScreenManager screenManager;
 // Forward declarations for menu item actions
 void onSolverSelected(ScreenManager& mgr);
 void onPracticeSelected(ScreenManager& mgr);
-void onMultiplayerSelected(ScreenManager& mgr);
+void onPowerOffSelected(ScreenManager& mgr);
 
 /// Main menu carousel: 3 game modes (Solver, Practice, Multiplayer — last disabled)
 MenuItem mainMenuItems[] = {
-    { nullptr, 0, 0, 'S', "Solver",      onSolverSelected      },
-    { nullptr, 0, 0, 'P', "Practice",    onPracticeSelected    },
-    // { nullptr, 0, 0, 'M', "Multiplayer", onMultiplayerSelected },
+    {nullptr, 0, 0, 'S', "Solver", onSolverSelected},
+    {nullptr, 0, 0, 'P', "Practice", onPracticeSelected},
+    {nullptr, 0, 0, 'D', "Power Off", onPowerOffSelected},
 };
 
 /// Main carousel screen — animates 3 menu options with tile morphing
-CarouselMenuScreen mainMenu(tft, screenManager, mainMenuItems, 2, "Genius Square");
+CarouselMenuScreen mainMenu(tft, screenManager, mainMenuItems, 3, "Genius Square");
 
 /// Solver entry screen — Solve / Back two-button layout
 SolverMenuScreen solverMenu(tft, screenManager);
@@ -71,12 +74,14 @@ PracticeScoreScreen practiceScore(tft, screenManager);
 PracticeGameScreen practiceGame(tft, screenManager, practiceScore);
 
 /// Button input with 50ms debounce; reports presses to ScreenManager
-ButtonWrapper button(BTN_PIN, []() { screenManager.onButtonPress(); },[]() { });
+ButtonWrapper button(BTN_PIN, []() { screenManager.onButtonPress(); }, []()
+{
+});
 
 /**
  * @brief Solver menu action — push the solver list screen onto the stack.
  */
-void onSolverSelected(ScreenManager& mgr)  { mgr.push(&solverMenu); }
+void onSolverSelected(ScreenManager& mgr) { mgr.push(&solverMenu); }
 
 /**
  * @brief Practice menu action — push the arrangement selection screen.
@@ -84,9 +89,17 @@ void onSolverSelected(ScreenManager& mgr)  { mgr.push(&solverMenu); }
 void onPracticeSelected(ScreenManager& mgr) { mgr.push(&practiceMenu); }
 
 /**
- * @brief Multiplayer menu action — placeholder; will push MultiplayerScreen when implemented.
+ * @brief Turns off the device by entering an infinite loop with the latch pin LOW.
  */
-void onMultiplayerSelected(ScreenManager&) { /* push MultiplayerScreen when implemented */ }
+void onPowerOffSelected(ScreenManager&)
+{
+    while (1)
+    {
+        digitalWrite(LATCH_PIN, LOW);
+        pinMode(LATCH_PIN, OUTPUT);
+        delay(500);
+    }
+}
 
 /**
  * @brief Arduino setup() — initialises hardware and launches the main menu.
@@ -100,8 +113,12 @@ void onMultiplayerSelected(ScreenManager&) { /* push MultiplayerScreen when impl
  * 4. Attach rotary encoder callback (negated delta so CW = +1)
  * 5. Push main menu onto ScreenManager stack (calls onEnter())
  */
-void setup() {
+void setup()
+{
     Serial.begin(115200);
+
+    pinMode(LATCH_PIN, OUTPUT);
+    digitalWrite(LATCH_PIN, HIGH);
 
     // Initialise ST7789 240×280 display with FSPI/HSPI hardware SPI.
     // Rotates to landscape 280×240 for buttons on the right edge.
@@ -110,7 +127,7 @@ void setup() {
     // Force RGB/BGR bit in MADCTL after rotation to fix colour channel order.
     // Without this, red and blue channels would be swapped (TFT_eSPI library quirk).
     tft.writecommand(0x36); // MADCTL (Memory Access Control)
-    tft.writedata(0xA0);    // MY=1, MX=0, MV=0, ML=0, RGB=1
+    tft.writedata(0xA0); // MY=1, MX=0, MV=0, ML=0, RGB=1
     tft.fillScreen(TFT_BLACK);
 
     // GridScanner handles ADC configuration
@@ -121,23 +138,31 @@ void setup() {
 
     // Attach rotary encoder callback. Negated delta so CW rotation = positive delta.
     // (ESP32Encoder convention is CW = negative, but UI convention is CW = +1)
-    rot.setCallbackFunc([](long delta) {
+    rot.setCallbackFunc([](long delta)
+    {
         screenManager.onEncoderChange(-(int)delta);
     });
 
     // Populate practice arrangements from the first N CombinationGenerator seeds.
-    for (int i = 0; i < PRACTICE_ITEM_COUNT; i++) {
+    for (int i = 0; i < PRACTICE_ITEM_COUNT; i++)
+    {
         PuzzleDifficulty packed = getDifficulty(i);
-        switch (packed) {
-            case PuzzleDifficulty::HARD:   practiceItems[i].difficulty = Difficulty::HARD; break;
-            case PuzzleDifficulty::MEDIUM: practiceItems[i].difficulty = Difficulty::MED; break;
-            case PuzzleDifficulty::EASY:   practiceItems[i].difficulty = Difficulty::EASY; break;
-            default:                       practiceItems[i].difficulty = Difficulty::EASY; break;
+        switch (packed)
+        {
+        case PuzzleDifficulty::HARD: practiceItems[i].difficulty = Difficulty::HARD;
+            break;
+        case PuzzleDifficulty::MEDIUM: practiceItems[i].difficulty = Difficulty::MED;
+            break;
+        case PuzzleDifficulty::EASY: practiceItems[i].difficulty = Difficulty::EASY;
+            break;
+        default: practiceItems[i].difficulty = Difficulty::EASY;
+            break;
         }
         uint8_t stored = PracticeScores::load(i);
         practiceItems[i].seconds = (stored > 0) ? (float)stored : 0.0f;
         practiceItems[i].arrangement = CombinationGenerator::generateCombinations(i);
-        practiceItems[i].action      = [i](ScreenManager& mgr) {
+        practiceItems[i].action = [i](ScreenManager& mgr)
+        {
             practiceGame.setArrangement(i, practiceItems[i].arrangement, &practiceItems[i].seconds);
             mgr.push(&practiceGame);
         };
@@ -158,9 +183,21 @@ void setup() {
  *
  * The ScreenManager forwards input events and render calls to the active screen.
  */
-void loop() {
-    rot.poll();              // Check encoder; fires callback on delta
-    button.poll();           // Check button; fires callback on debounced press
-    screenManager.update();  // Advance animations (called every frame)
-    screenManager.render();  // Draw current screen to TFT
+void loop()
+{
+    rot.poll(); // Check encoder; fires callback on delta
+    button.poll(); // Check button; fires callback on debounced press
+    screenManager.update(); // Advance animations (called every frame)
+    screenManager.render(); // Draw current screen to TFT
+
+    if (millis() - max(rot.getLastActivity(), button.getLastActivity()) > 1000*NO_ACTVITY_TIMEOUT_S)
+    {
+       // turn off device
+         while (1)
+          {
+                digitalWrite(LATCH_PIN, LOW);
+                pinMode(LATCH_PIN, OUTPUT);
+                delay(500);
+          }
+    }
 }
