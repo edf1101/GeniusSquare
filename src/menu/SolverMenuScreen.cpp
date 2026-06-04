@@ -19,6 +19,9 @@
 #include <math.h>
 #include <string.h>
 #include <vector>
+#include "utils/Buzzer.h"
+
+extern Buzzer buzzer;
 
 SolverMenuScreen::SolverMenuScreen(TFT_eSPI& tft, ScreenManager& manager)
     : _tft(tft), _manager(manager),
@@ -193,6 +196,7 @@ void SolverMenuScreen::onEncoderChange(int delta) {
     else if (delta < 0) _selectedIndex = 0;
 
     if (oldIndex != _selectedIndex) {
+        buzzer.play(SoundEffect::MENU_TICK);
         // Erase old border and redraw old button unselected
         eraseBorder(oldIndex);
         if (oldIndex == 0) {
@@ -215,6 +219,7 @@ void SolverMenuScreen::onEncoderChange(int delta) {
 
 
 void SolverMenuScreen::onButtonPress() {
+    buzzer.play(SoundEffect::MENU_SELECT);
     if (_selectedIndex == 0) {
         _manager.pop();
     } else {

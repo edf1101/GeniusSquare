@@ -7,6 +7,9 @@
 #include "menu/CarouselMenuScreen.h"
 #include <math.h>
 #include <string.h>
+#include "utils/Buzzer.h"
+
+extern Buzzer buzzer;
 
 CarouselMenuScreen::CarouselMenuScreen(TFT_eSPI& tft, ScreenManager& manager,
                                        const MenuItem* items, uint8_t count,
@@ -138,6 +141,7 @@ void CarouselMenuScreen::render() {
 
 void CarouselMenuScreen::onEncoderChange(int delta) {
     if (_count == 0) return;
+    buzzer.play(SoundEffect::MENU_TICK);
 
     if (_wrap) {
         _selectedIndex = ((_selectedIndex + delta) % _count + _count) % _count;
@@ -151,6 +155,7 @@ void CarouselMenuScreen::onEncoderChange(int delta) {
 }
 
 void CarouselMenuScreen::onButtonPress() {
+    buzzer.play(SoundEffect::MENU_SELECT);
     if (_count == 0) return;
     if (_items[_selectedIndex].action != nullptr) {
         _items[_selectedIndex].action(_manager);

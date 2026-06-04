@@ -24,6 +24,9 @@
 #include <math.h>
 #include <stdio.h>
 #include <string.h>
+#include "utils/Buzzer.h"
+
+extern Buzzer buzzer;
 
 // ---- Constructor ----
 
@@ -162,6 +165,8 @@ void ListMenuScreen::onEncoderChange(int delta) {
 
     if (_selectedIndex == prevIndex) return; // already at boundary, nothing to redraw
 
+    buzzer.play(SoundEffect::MENU_TICK);
+
     // Erase the live border on the departing row before the viewport shifts.
     if (_border.lastThickness >= 0.0f) {
         int oldScreenRow = (int)prevIndex - (int)_viewStart;
@@ -204,6 +209,7 @@ void ListMenuScreen::onEncoderChange(int delta) {
  * - Otherwise, call the action callback for the selected item.
  */
 void ListMenuScreen::onButtonPress() {
+    buzzer.play(SoundEffect::MENU_SELECT);
     if (_selectedIndex == 0) {
         _manager.pop();  // Back selected — return to previous screen
     } else {

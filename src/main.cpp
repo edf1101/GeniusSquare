@@ -21,6 +21,7 @@
 #include "menu/PracticeGameScreen.h"
 #include "menu/PracticeScoreScreen.h"
 #include "utils/PracticeScores.h"
+#include "utils/Buzzer.h"
 
 // ---- Hardware pins ----
 // Rotary encoder pins connected to ESP32-S3 using PCNT hardware counter
@@ -34,6 +35,9 @@
 // ---- Hardware objects ----
 /// Shared TFT_eSPI display instance (240×280 landscape after rotation)
 TFT_eSPI tft = TFT_eSPI();
+
+/// Buzzer on pin 46 — non-blocking ledc-driven sound effects
+Buzzer buzzer(46);
 
 /// Rotary encoder wrapper; provides delta-based callback on half-quad ticks
 RotaryWrapper rot(ROT_A, ROT_B, true);
@@ -93,6 +97,8 @@ void onPracticeSelected(ScreenManager& mgr) { mgr.push(&practiceMenu); }
  */
 void onPowerOffSelected(ScreenManager&)
 {
+    buzzer.play(SoundEffect::POWER_OFF);
+    delay(500); // allow the 400ms sequence to finish before cutting power
     while (1)
     {
         digitalWrite(LATCH_PIN, LOW);
@@ -132,6 +138,9 @@ void setup()
 
     // GridScanner handles ADC configuration
     GridScanner::init();
+
+    buzzer.begin();
+    buzzer.play(SoundEffect::POWER_ON);
 
     // Initialise EEPROM backing store for practice best scores.
     PracticeScores::init(PRACTICE_ITEM_COUNT);
@@ -187,6 +196,7 @@ void loop()
 {
     rot.poll(); // Check encoder; fires callback on delta
     button.poll(); // Check button; fires callback on debounced press
+    buzzer.update();
     screenManager.update(); // Advance animations (called every frame)
     screenManager.render(); // Draw current screen to TFT
 

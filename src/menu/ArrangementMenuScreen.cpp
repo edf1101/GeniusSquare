@@ -17,6 +17,9 @@
 #include <stdio.h>
 #include <string.h>
 #include <math.h>
+#include "utils/Buzzer.h"
+
+extern Buzzer buzzer;
 
 // ---- Constructor ----
 
@@ -127,6 +130,8 @@ void ArrangementMenuScreen::onEncoderChange(int delta) {
 
     if (_selectedIndex == prevIndex) return;
 
+    buzzer.play(SoundEffect::MENU_TICK);
+
     // Erase live border on departing row before viewport potentially shifts
     if (_border.lastThickness >= 0.0f) {
         int oldSlot = (int)prevIndex - (int)_viewStart;
@@ -167,6 +172,7 @@ void ArrangementMenuScreen::onEncoderChange(int delta) {
  * Index 0 = Back (pops screen). Index 1-2 = call item's action callback.
  */
 void ArrangementMenuScreen::onButtonPress() {
+    buzzer.play(SoundEffect::MENU_SELECT);
     if (_selectedIndex == 0) {
         _manager.pop();
     } else {

@@ -11,6 +11,8 @@
 #include <cstring>
 #include <cstdio>
 #include <math.h>
+#include "utils/Buzzer.h"
+extern Buzzer buzzer;
 
 PracticeGameScreen::PracticeGameScreen(TFT_eSPI& tft, ScreenManager& manager,
                                        PracticeScoreScreen& scoreScreen)
@@ -94,11 +96,13 @@ void PracticeGameScreen::update() {
             _timerStartMs   = curMs;
             _elapsedSeconds = 0.0f;
             _panelDirty     = true;
+            buzzer.play(SoundEffect::GAME_START);
         } else {
             uint8_t rem = (uint8_t)(COUNTDOWN_SECONDS - elapsed / 1000);
             if (rem != _countdownRemaining) {
                 _countdownRemaining = rem;
                 _panelDirty = true;
+                buzzer.play(SoundEffect::COUNTDOWN_TICK);
             }
         }
     } else if (_phase == Phase::PLAYING) {
@@ -342,6 +346,7 @@ void PracticeGameScreen::scanGrid() {
             if (_grid[(uint8_t)b.y][(uint8_t)b.x]) placed++;
         }
         if (placed != _confirmedCount) {
+            if (placed > _confirmedCount) buzzer.play(SoundEffect::PIECE_PLACED);
             _confirmedCount = placed;
             _panelDirty = true;
         }
@@ -402,6 +407,9 @@ void PracticeGameScreen::finishGame() {
         uint8_t toStore = (_elapsedSeconds >= 255.0f) ? 255u : (uint8_t)_elapsedSeconds;
         if (toStore == 0) toStore = 1;  // 0 is reserved as "no score"
         PracticeScores::save(_arrangementIndex, toStore);
+        buzzer.play(SoundEffect::NEW_BEST);
+    } else {
+        buzzer.play(SoundEffect::WIN);
     }
     float best = (_bestSeconds != nullptr) ? *_bestSeconds : 0.0f;
     _scoreScreen.setResult(_elapsedSeconds, best, isNewBest);
