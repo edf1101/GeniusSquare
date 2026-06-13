@@ -14,7 +14,8 @@
       "WebFetch(domain:docs.espressif.com)",
       "Bash(make clean *)",
       "Bash(make)",
-      "Bash(./genius_solver)"
+      "Bash(./genius_solver)",
+      "Bash(grep -E \"\\\\.\\(h|cpp\\)$\")"
     ]
   }
 }

@@ -141,7 +141,8 @@ void CarouselMenuScreen::render() {
 
 void CarouselMenuScreen::onEncoderChange(int delta) {
     if (_count == 0) return;
-    buzzer.play(SoundEffect::MENU_TICK);
+
+    int prevIndex = _selectedIndex;
 
     if (_wrap) {
         _selectedIndex = ((_selectedIndex + delta) % _count + _count) % _count;
@@ -149,6 +150,9 @@ void CarouselMenuScreen::onEncoderChange(int delta) {
         _selectedIndex = max(0, min((int)_count - 1, _selectedIndex + delta));
     }
 
+    if (_selectedIndex == prevIndex) return;
+
+    buzzer.play(SoundEffect::MENU_TICK);
     _targetOffset = (float)_selectedIndex;
     _dirty        = true;
     drawLabelBar();
