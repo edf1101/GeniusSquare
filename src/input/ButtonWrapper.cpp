@@ -7,8 +7,8 @@
 #include "ButtonWrapper.h"
 
 ButtonWrapper::ButtonWrapper(uint8_t pin, std::function<void()> onRelease, std::function<void()> onLongRelease)
-    : _pin(pin), _onRelease(onRelease), _onLongRelease(onLongRelease), 
-      _isPressed(false), _pressStartTime(0), _lastTransitionTime(0) {
+    : _pin(pin), _onRelease(onRelease), _onLongRelease(onLongRelease),
+      _isPressed(false), _pressStartTime(0), _lastTransitionTime(0), _lastReleaseTime(0) {
 
     // Reverted to INPUT for Active HIGH (assumes you have a physical pull-down resistor)
     pinMode(_pin, INPUT);
@@ -25,22 +25,21 @@ void ButtonWrapper::poll() {
         _lastState = currentState;
 
         if (currentState == HIGH) {
-            // Button went HIGH (Just Pressed)
+            // Button went HIGH (Just Pressed) — fire immediately on press-down
             _pressStartTime = now;
             _isPressed = true;
+            if (_onRelease) _onRelease();
         }
         else if (currentState == LOW && _isPressed) {
             // Button went LOW (Just Released)
             unsigned long duration = now - _pressStartTime;
 
-            // Fire exactly ONE callback based on how long it was held
             if (_onLongRelease && duration >= LONG_PRESS_MS) {
                 _onLongRelease();
-            } else if (_onRelease) {
-                _onRelease();
             }
 
             _isPressed = false;
+            _lastReleaseTime = now;
         }
     }
 }

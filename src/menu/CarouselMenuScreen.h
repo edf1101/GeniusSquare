@@ -98,8 +98,8 @@ private:
     static constexpr uint16_t COL_BORDER     = 0xFFFF; ///< Wave selection border — white
     static constexpr uint16_t COL_LABEL      = 0xFFFF; ///< Label bar text — white
     static constexpr uint16_t COL_TITLE      = 0xAD75; ///< Title bar text — light grey
-    static constexpr uint16_t COL_ICON_SEL   = 0x0000; ///< Icon on selected tile — black
-    static constexpr uint16_t COL_ICON_UNSEL = 0xAD75; ///< Icon on unselected tile — light grey
+    static constexpr uint16_t COL_ICON_SEL   = 0xFFFF; ///< Icon on selected tile — white
+    static constexpr uint16_t COL_ICON_UNSEL = 0xFFFF; ///< Icon on unselected tile — white
 
     void drawTitleBar();
     void drawLabelBar();
@@ -117,6 +117,11 @@ private:
      * Only redraws when thickness or colour changes.
      */
     void updateBorder();
+
+    /**
+     * @brief Draw bitmap icons for all visible tiles (called only when carousel is settled).
+     */
+    void drawBitmaps();
 
     /**
      * @brief Draw a uniform-thickness border with rounded corners around a tile.
@@ -150,6 +155,8 @@ private:
 
     float _borderEnvelope;     // 0..1 intro/outro envelope for border thickness
     bool  _borderPulseActive;  // pulse starts only after intro reaches BORDER_T_
+
+    float _bitmapFade;         // 0..1 fade envelope for bitmap icons
 };
 
 #endif // CAROUSEL_MENU_SCREEN_H

@@ -19,7 +19,7 @@ CarouselMenuScreen::CarouselMenuScreen(TFT_eSPI& tft, ScreenManager& manager,
       _animOffset(0.0f), _prevAnimOffset(-1.0f), _targetOffset(0.0f),
       _lastMs(0), _selectedIndex(0), _dirty(true),
       _borderPhase(0.0f), _lastBorderThickness(-1.0f), _lastBorderColor(0),
-      _borderEnvelope(0.0f), _borderPulseActive(false)
+      _borderEnvelope(0.0f), _borderPulseActive(false), _bitmapFade(1.0f)
 {
 }
 
@@ -32,6 +32,7 @@ void CarouselMenuScreen::onEnter() {
     _lastBorderColor = 0;
     _borderEnvelope    = 0.0f;
     _borderPulseActive = false;
+    _bitmapFade      = 1.0f;
     _lastMs          = millis();
     _dirty           = true;
     _tft.setTextWrap(false);
@@ -50,6 +51,7 @@ void CarouselMenuScreen::onResume() {
     _lastBorderColor = 0;
     _borderEnvelope    = 0.0f;
     _borderPulseActive = false;
+    _bitmapFade      = 1.0f;
     _dirty          = true;
     _tft.setTextWrap(false);
     _tft.fillScreen(COL_BG);
@@ -110,9 +112,13 @@ void CarouselMenuScreen::update() {
     if (settled) {
         // Carousel is still; fade border in (125ms to full opacity).
         _borderEnvelope = min(_borderEnvelope + dt * BORDER_INTRO_SPEED, 1.0f);
+        // Also fade bitmap in
+        _bitmapFade = min(_bitmapFade + dt * BORDER_INTRO_SPEED, 1.0f);
     } else {
         // Carousel is moving; quickly fade border out (67ms to zero).
         _borderEnvelope = max(_borderEnvelope - dt * BORDER_OUTRO_SPEED, 0.0f);
+        // Also fade bitmap out
+        _bitmapFade = max(_bitmapFade - dt * BORDER_OUTRO_SPEED, 0.0f);
     }
 }
 
@@ -137,6 +143,9 @@ void CarouselMenuScreen::render() {
         // Carousel settled — update the animated border around the center tile.
         updateBorder();
     }
+
+    // Draw bitmaps with fade effect (fades out when moving, fades in when settled)
+    drawBitmaps();
 }
 
 void CarouselMenuScreen::onEncoderChange(int delta) {
@@ -370,16 +379,52 @@ void CarouselMenuScreen::drawTileArea() {
     }
 
     _tft.endWrite();
+}
 
-    // Draw bitmap icons on top; placeholder chars are already baked into the tile stream.
+// ---------------------------------------------------------------------------
+// Bitmap drawing (only when carousel is settled)
+// ---------------------------------------------------------------------------
+
+void CarouselMenuScreen::drawBitmaps() {
+    // Skip if bitmaps are completely faded out
+    if (_bitmapFade < 0.01f) return;
+
+    struct TileInfo {
+        int cx, cy;
+        const MenuItem* item;
+    };
+
+    TileInfo tiles[8];
+    int nTiles = 0;
+
+    for (int i = 0; i < _count && nTiles < 8; i++) {
+        float dist = (float)i - _animOffset;
+        if (_wrap && _count > 1) {
+            float half = _count / 2.0f;
+            while (dist >  half) dist -= _count;
+            while (dist < -half) dist += _count;
+        }
+        if (fabsf(dist) > 1.5f) continue;
+
+        float t    = min(fabsf(dist), 1.0f);
+        int   size = (int)(CENTER_SIZE + (SIDE_SIZE - CENTER_SIZE) * t);
+        int   tileX = CENTER_X + (int)(dist * TILE_STRIDE);
+
+        TileInfo& ti  = tiles[nTiles++];
+        ti.cx         = tileX;
+        ti.cy         = TILE_AREA_CY;
+        ti.item       = &_items[i];
+    }
+
     for (int t = 0; t < nTiles; t++) {
         const TileInfo& ti = tiles[t];
-        if (ti.x1 >= SCR_W || ti.x2 < 0) continue;
         if (ti.item->bitmap != nullptr) {
+            uint16_t baseColour = (ti.item == &_items[_selectedIndex]) ? COL_ICON_SEL : COL_ICON_UNSEL;
+            uint16_t iconColour = blendColor(COL_BG, baseColour, _bitmapFade);
             _tft.drawBitmap(ti.cx - ti.item->bitmapW / 2,
                             ti.cy - ti.item->bitmapH / 2,
                             ti.item->bitmap, ti.item->bitmapW, ti.item->bitmapH,
-                            ti.iconColour);
+                            iconColour);
         }
     }
 }

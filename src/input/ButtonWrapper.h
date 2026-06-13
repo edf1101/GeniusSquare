@@ -21,13 +21,15 @@ private:
     bool _lastState;
     bool _isPressed;
     unsigned long _pressStartTime;
-    unsigned long _lastTransitionTime; // Added for cleaner debouncing
+    unsigned long _lastTransitionTime;
+    unsigned long _lastReleaseTime;
 
     std::function<void()> _onRelease;
     std::function<void()> _onLongRelease;
 
     static constexpr unsigned long DEBOUNCE_MS = 50;
-    static constexpr unsigned long LONG_PRESS_MS = 800; // Threshold for long press
+    static constexpr unsigned long RELEASE_GUARD_MS = 100;
+    static constexpr unsigned long LONG_PRESS_MS = 800;
 
 };
 
